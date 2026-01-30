@@ -4,15 +4,15 @@
   "sources": {
     "eu_countries": {
       "type": "geojson",
-      "data": "./Europe.json"
+      "data": "./europe.json"
     },
     "de_states": {
       "type": "geojson",
-      "data": "./Germany.json"
+      "data": "./germany.json"
     },
     "de_places": {
       "type": "geojson",
-      "data": "./Germany inner points.json"
+      "data": "./germany_inner_points.json"
     },
     "route": {
       "type": "geojson",
@@ -131,4 +131,5 @@
     }
   ]
 }
+
 
