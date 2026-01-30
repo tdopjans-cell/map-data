@@ -1,6 +1,7 @@
 {
   "version": 8,
-  "name": "Minimal",
+  "name": "Way2goX Minimal Map",
+  "glyphs": "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
   "sources": {
     "eu_countries": {
       "type": "geojson",
@@ -9,21 +10,45 @@
     "de_states": {
       "type": "geojson",
       "data": "./germany.json"
+    },
+    "de_state_points": {
+      "type": "geojson",
+      "data": "./germany_inner_points.json"
+    },
+    "de_places": {
+      "type": "geojson",
+      "data": { "type": "FeatureCollection", "features": [] }
+    },
+    "route": {
+      "type": "geojson",
+      "data": { "type": "FeatureCollection", "features": [] }
+    },
+    "flags": {
+      "type": "geojson",
+      "data": { "type": "FeatureCollection", "features": [] }
+    },
+    "selected": {
+      "type": "geojson",
+      "data": { "type": "FeatureCollection", "features": [] }
     }
   },
   "layers": [
     {
       "id": "bg",
       "type": "background",
-      "paint": { "background-color": "#ffffff" }
+      "paint": { "background-color": "rgba(0,0,0,0)" }
     },
+
+    /* =========================
+       EUROPE (Level: europe)
+       ========================= */
 
     {
       "id": "eu-countries-fill",
       "type": "fill",
       "source": "eu_countries",
       "layout": { "visibility": "visible" },
-      "paint": { "fill-color": "#000000", "fill-opacity": 0.03 }
+      "paint": { "fill-color": "#ffffff", "fill-opacity": 0.02 }
     },
     {
       "id": "eu-countries-line",
@@ -32,13 +57,35 @@
       "layout": { "visibility": "visible" },
       "paint": { "line-color": "#111111", "line-width": 1 }
     },
+    {
+      "id": "eu-country-labels",
+      "type": "symbol",
+      "source": "eu_countries",
+      "layout": {
+        "visibility": "visible",
+        "symbol-placement": "point",
+        "text-field": ["coalesce", ["get", "NAME_DE"], ["get", "NAME"], ["get", "name_de"], ["get", "name"]],
+        "text-font": ["Noto Sans Regular"],
+        "text-size": 12,
+        "text-allow-overlap": false
+      },
+      "paint": {
+        "text-color": "#111111",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 1
+      }
+    },
+
+    /* =========================
+       GERMANY (Level: germany)
+       ========================= */
 
     {
       "id": "de-states-fill",
       "type": "fill",
       "source": "de_states",
       "layout": { "visibility": "none" },
-      "paint": { "fill-color": "#000000", "fill-opacity": 0.03 }
+      "paint": { "fill-color": "#ffffff", "fill-opacity": 0.02 }
     },
     {
       "id": "de-states-line",
@@ -46,7 +93,156 @@
       "source": "de_states",
       "layout": { "visibility": "none" },
       "paint": { "line-color": "#111111", "line-width": 1 }
+    },
+
+    /* Bundesländer-Labels: aus deiner Punkte-Datei */
+    {
+      "id": "de-state-labels",
+      "type": "symbol",
+      "source": "de_state_points",
+      "layout": {
+        "visibility": "none",
+        "symbol-placement": "point",
+        "text-field": ["coalesce", ["get", "NAME_DE"], ["get", "NAME"], ["get", "name_de"], ["get", "name"]],
+        "text-font": ["Noto Sans Regular"],
+        "text-size": 12,
+        "text-allow-overlap": false
+      },
+      "paint": {
+        "text-color": "#111111",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 1
+      }
+    },
+
+    /* (später) Städte */
+    {
+      "id": "de-places",
+      "type": "circle",
+      "source": "de_places",
+      "layout": { "visibility": "none" },
+      "paint": {
+        "circle-radius": 4,
+        "circle-color": "#111111",
+        "circle-opacity": 1
+      }
+    },
+    {
+      "id": "de-place-labels",
+      "type": "symbol",
+      "source": "de_places",
+      "layout": {
+        "visibility": "none",
+        "text-field": ["coalesce", ["get", "NAME_DE"], ["get", "NAME"], ["get", "name_de"], ["get", "name"]],
+        "text-font": ["Noto Sans Regular"],
+        "text-size": 12,
+        "text-offset": [0, 1.0],
+        "text-anchor": "top",
+        "text-allow-overlap": false
+      },
+      "paint": {
+        "text-color": "#111111",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 1
+      }
+    },
+
+    /* =========================
+       SELECTED HIGHLIGHTS (role outlines)
+       ========================= */
+
+    {
+      "id": "selected-fill",
+      "type": "fill",
+      "source": "selected",
+      "layout": { "visibility": "visible" },
+      "paint": { "fill-color": "#ffffff", "fill-opacity": 0.03 }
+    },
+
+    {
+      "id": "selected-outline-start-wide",
+      "type": "line",
+      "source": "selected",
+      "filter": ["==", ["get", "role"], "start"],
+      "layout": { "visibility": "visible" },
+      "paint": { "line-color": "#2b2b2b", "line-width": 5, "line-opacity": 0.25 }
+    },
+    {
+      "id": "selected-outline-start",
+      "type": "line",
+      "source": "selected",
+      "filter": ["==", ["get", "role"], "start"],
+      "layout": { "visibility": "visible" },
+      "paint": { "line-color": "#111111", "line-width": 2 }
+    },
+
+    {
+      "id": "selected-outline-stop-wide",
+      "type": "line",
+      "source": "selected",
+      "filter": ["==", ["get", "role"], "stop"],
+      "layout": { "visibility": "visible" },
+      "paint": { "line-color": "#2b2b2b", "line-width": 4, "line-opacity": 0.18 }
+    },
+    {
+      "id": "selected-outline-stop",
+      "type": "line",
+      "source": "selected",
+      "filter": ["==", ["get", "role"], "stop"],
+      "layout": { "visibility": "visible" },
+      "paint": { "line-color": "#111111", "line-width": 2 }
+    },
+
+    {
+      "id": "selected-outline-end-wide",
+      "type": "line",
+      "source": "selected",
+      "filter": ["==", ["get", "role"], "end"],
+      "layout": { "visibility": "visible" },
+      "paint": { "line-color": "#2b2b2b", "line-width": 6, "line-opacity": 0.28 }
+    },
+    {
+      "id": "selected-outline-end",
+      "type": "line",
+      "source": "selected",
+      "filter": ["==", ["get", "role"], "end"],
+      "layout": { "visibility": "visible" },
+      "paint": { "line-color": "#111111", "line-width": 2 }
+    },
+
+    /* =========================
+       ROUTE (line)
+       ========================= */
+
+    {
+      "id": "route-line",
+      "type": "line",
+      "source": "route",
+      "layout": { "visibility": "visible" },
+      "paint": { "line-color": "#111111", "line-width": 2, "line-opacity": 1 }
+    },
+
+    /* =========================
+       FLAGS (icons)
+       ========================= */
+
+    {
+      "id": "flags",
+      "type": "symbol",
+      "source": "flags",
+      "layout": {
+        "visibility": "visible",
+        "icon-image": [
+          "match",
+          ["get", "role"],
+          "start", "flag-start",
+          "stop", "flag-stop",
+          "end", "flag-end",
+          "flag-stop"
+        ],
+        "icon-size": 1,
+        "icon-allow-overlap": true
+      }
     }
   ]
 }
-
