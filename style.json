@@ -4,11 +4,11 @@
   "sources": {
     "eu_countries": {
       "type": "geojson",
-      "data": "./Europe.json"
+      "data": "./europe.json"
     },
     "de_states": {
       "type": "geojson",
-      "data": "./Germany.json"
+      "data": "./germany.json"
     }
   },
   "layers": [
@@ -49,3 +49,4 @@
     }
   ]
 }
+
