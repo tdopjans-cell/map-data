@@ -18,184 +18,175 @@
 <div id="map"></div>
 
 <script>
-  const STYLE_URL = "./style.json";
+ const STYLE_URL = "./style.json";
 
-  let currentLevel = "europe"; // "europe" | "germany"
-  let currentLang = "de";
+let currentLevel = "europe";
+let currentLang = "de";
 
-  // in-memory state:
-  let selected = { start: null, stops: [], end: null };
+// state from Bubble
+let selected = { start: null, stops: [], end: null };
 
-  const map = new maplibregl.Map({
-    container: "map",
-    style: STYLE_URL,
-    center: [12, 52],
-    zoom: 3.5,
-    attributionControl: false
-  });
+const map = new maplibregl.Map({
+  container: "map",
+  style: STYLE_URL,
+  center: [12, 52],
+  zoom: 3.5,
+  attributionControl: false
+});
 
-  function vis(id, on){ map.setLayoutProperty(id, "visibility", on ? "visible" : "none"); }
-
-  function setLevel(level){
-    currentLevel = level;
-
-    const showEurope = level === "europe";
-    const showGermany = level === "germany";
-
-    vis("eu-countries-fill", showEurope);
-    vis("eu-countries-line", showEurope);
-    vis("eu-country-labels", showEurope);
-
-    vis("de-states-fill", showGermany);
-    vis("de-states-line", showGermany);
-    vis("de-state-labels", showGermany);
-    vis("de-places", showGermany);
-    vis("de-place-labels", showGermany);
-
-    // Zoom Animation (feel-good)
-    if (level === "europe") map.flyTo({ center:[12,52], zoom:3.5, duration: 900 });
-    if (level === "germany") map.flyTo({ center:[10.5,51.2], zoom:5.8, duration: 900 });
+function safeSetVisibility(id, visible) {
+  try {
+    if (map.getLayer(id)) {
+      map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
+    }
+  } catch (e) {
+    console.warn("visibility fail", id, e);
   }
+}
 
-  function setLanguage(lang){
-    currentLang = lang;
-    const textExpr = ["coalesce", ["get", "name_" + lang], ["get", "name"]];
-    map.setLayoutProperty("eu-country-labels", "text-field", textExpr);
-    map.setLayoutProperty("de-state-labels", "text-field", textExpr);
-    map.setLayoutProperty("de-place-labels", "text-field", textExpr);
-  }
+function setLevel(level) {
+  currentLevel = level;
 
-  function featureId(p, fallbackId){
-    return (p.id || p.iso_a2 || p.iso_3166_2 || fallbackId || "").toString();
-  }
-  function featureName(p){
-    return (p["name_" + currentLang] || p.name || "").toString();
-  }
+  const showEurope = level === "europe";
+  const showGermany = level === "germany";
 
-  function emitSelect(payload){
-    window.parent.postMessage({ type: "select", payload }, "*");
-  }
+  safeSetVisibility("eu-countries-fill", showEurope);
+  safeSetVisibility("eu-countries-line", showEurope);
+  safeSetVisibility("eu-country-labels", showEurope);
 
-  function updateFlagsGeojson(){
-    // Flag-Position: im MVP nehmen wir die Klick-Position, die Bubble mitschickt.
-    // (Später kannst du Label-Points nutzen für perfekte Positionierung.)
-    const feats = [];
+  safeSetVisibility("de-states-fill", showGermany);
+  safeSetVisibility("de-states-line", showGermany);
+  safeSetVisibility("de-state-labels", showGermany);
+  safeSetVisibility("de-places", showGermany);
+  safeSetVisibility("de-place-labels", showGermany);
 
-    if (selected.start) feats.push({
-      type:"Feature",
-      geometry:{ type:"Point", coordinates:[selected.start.lng, selected.start.lat] },
-      properties:{ role:"start" }
-    });
+  if (level === "europe") map.flyTo({ center: [12, 52], zoom: 3.5, duration: 900 });
+  if (level === "germany") map.flyTo({ center: [10.5, 51.2], zoom: 5.8, duration: 900 });
+}
 
-    for (const s of selected.stops || []) feats.push({
-      type:"Feature",
-      geometry:{ type:"Point", coordinates:[s.lng, s.lat] },
-      properties:{ role:"stop" }
-    });
+function setLanguage(lang) {
+  currentLang = lang;
+  // MVP: wir lassen das Style-Feld (coalesce) wie es ist.
+  // Optional später: dynamisch auf NAME_DE / NAME_EN etc. umstellen.
+}
 
-    if (selected.end) feats.push({
-      type:"Feature",
-      geometry:{ type:"Point", coordinates:[selected.end.lng, selected.end.lat] },
-      properties:{ role:"end" }
-    });
-
-    const fc = { type:"FeatureCollection", features: feats };
-    const src = map.getSource("flags");
-    if (src) src.setData(fc);
-  }
-
-  function updateRouteGeojson(stops){
-    const coords = (stops || []).map(s => [s.lng, s.lat]).filter(c => isFinite(c[0]) && isFinite(c[1]));
-    const fc = {
-      type:"FeatureCollection",
-      features: coords.length >= 2 ? [{
-        type:"Feature",
-        geometry:{ type:"LineString", coordinates: coords },
-        properties:{}
-      }] : []
-    };
-    const src = map.getSource("route");
-    if (src) src.setData(fc);
-  }
-
-  async function addIcon(name, url){
+async function addIconSafe(name, url) {
+  try {
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.src = url;
     await img.decode();
-    map.addImage(name, img);
+    if (!map.hasImage(name)) map.addImage(name, img);
+  } catch (e) {
+    console.warn("Icon konnte nicht geladen werden:", name, url);
+  }
+}
+
+function updateFlagsGeojson() {
+  const feats = [];
+
+  if (selected.start && isFinite(selected.start.lng) && isFinite(selected.start.lat)) {
+    feats.push({
+      type: "Feature",
+      geometry: { type: "Point", coordinates: [selected.start.lng, selected.start.lat] },
+      properties: { role: "start" }
+    });
   }
 
-  map.on("load", async () => {
-    // Icons laden
-    await addIcon("flag-start", "./flag_start.png");
-    await addIcon("flag-stop", "./flag_stop.png");
-    await addIcon("flag-end", "./flag_end.png");
-
-    setLanguage(currentLang);
-    setLevel(currentLevel);
-    updateFlagsGeojson();
-  });
-
-  map.on("click", (e) => {
-    const layers = currentLevel === "germany"
-      ? ["de-states-fill", "de-places"]
-      : ["eu-countries-fill"];
-
-    const feats = map.queryRenderedFeatures(e.point, { layers });
-    if (!feats.length) return;
-
-    const f = feats[0];
-    const p = f.properties || {};
-    const id = featureId(p, f.id);
-    const name = featureName(p);
-    const kind = (f.layer.id === "de-places") ? "city" : "area";
-
-    emitSelect({
-      id, name, kind,
-      level: currentLevel,
-      lng: e.lngLat.lng,
-      lat: e.lngLat.lat
+  for (const s of (selected.stops || [])) {
+    if (!s || !isFinite(s.lng) || !isFinite(s.lat)) continue;
+    feats.push({
+      type: "Feature",
+      geometry: { type: "Point", coordinates: [s.lng, s.lat] },
+      properties: { role: "stop" }
     });
-  });
+  }
 
- // Bubble -> Map
+  if (selected.end && isFinite(selected.end.lng) && isFinite(selected.end.lat)) {
+    feats.push({
+      type: "Feature",
+      geometry: { type: "Point", coordinates: [selected.end.lng, selected.end.lat] },
+      properties: { role: "end" }
+    });
+  }
+
+  const fc = { type: "FeatureCollection", features: feats };
+  const src = map.getSource("flags");
+  if (src) src.setData(fc);
+}
+
+function updateRouteGeojson(stops) {
+  const coords = (stops || [])
+    .map(s => [s.lng, s.lat])
+    .filter(c => isFinite(c[0]) && isFinite(c[1]));
+
+  const fc = {
+    type: "FeatureCollection",
+    features: coords.length >= 2 ? [{
+      type: "Feature",
+      geometry: { type: "LineString", coordinates: coords },
+      properties: {}
+    }] : []
+  };
+
+  const src = map.getSource("route");
+  if (src) src.setData(fc);
+}
+
+// Map -> Bubble (select)
+map.on("click", (e) => {
+  const layers = currentLevel === "germany"
+    ? ["de-states-fill", "de-places"]
+    : ["eu-countries-fill"];
+
+  const feats = map.queryRenderedFeatures(e.point, { layers });
+  if (!feats.length) return;
+
+  const f = feats[0];
+  const p = f.properties || {};
+
+  const id = (p.id || p.iso_a2 || p.iso_3166_2 || f.id || "").toString();
+  const name = (p.NAME_DE || p.NAME || p.name_de || p.name || "").toString();
+  const kind = (f.layer && f.layer.id === "de-places") ? "city" : "area";
+
+  window.parent.postMessage({
+    type: "select",
+    payload: { id, name, kind, level: currentLevel, lng: e.lngLat.lng, lat: e.lngLat.lat }
+  }, "*");
+});
+
+// Bubble -> Map
 window.addEventListener("message", (ev) => {
   const msg = ev.data;
   if (!msg || typeof msg !== "object") return;
 
-  if (msg.type === "setLevel") {
-    setLevel(msg.level); // "europe" | "germany"
-    return;
-  }
-
-  if (msg.type === "setLanguage") {
-    setLanguage(msg.lang); // "de" | "en" ...
-    return;
-  }
+  if (msg.type === "setLevel") setLevel(msg.level);
+  if (msg.type === "setLanguage") setLanguage(msg.lang);
 
   if (msg.type === "setSelected") {
-    // expected: {start:{lng,lat}, stops:[{lng,lat}], end:{lng,lat}}
     selected = msg.selected || { start: null, stops: [], end: null };
     updateFlagsGeojson();
-    return;
   }
 
   if (msg.type === "setRoute") {
-    // expected: stops: [{lng,lat}, ...]
     updateRouteGeojson(msg.stops || []);
-    return;
   }
-}),
+});
 
+map.on("load", async () => {
+  // Icons liegen im Root:
+  await addIconSafe("flag-start", "./flag_start.png");
+  await addIconSafe("flag-stop", "./flag_stop.png");
+  await addIconSafe("flag-end", "./flag_end.png");
 
-    if (msg.type === "setRoute") {
-      updateRouteGeojson(msg.stops || []);
-    }
-  });
+  setLevel(currentLevel);
+  updateFlagsGeojson();
+});
+
 </script>
 </body>
 </html>
+
 
 
 
