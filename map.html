@@ -159,19 +159,35 @@
     });
   });
 
-  // Bubble -> Map
-  window.addEventListener("message", (ev) => {
-    const msg = ev.data;
-    if (!msg || typeof msg !== "object") return;
+ // Bubble -> Map
+window.addEventListener("message", (ev) => {
+  const msg = ev.data;
+  if (!msg || typeof msg !== "object") return;
 
-    if (msg.type === "setLevel") setLevel(msg.level);
-    if (msg.type === "setLanguage") setLanguage(msg.lang);
+  if (msg.type === "setLevel") {
+    setLevel(msg.level); // "europe" | "germany"
+    return;
+  }
 
-    if (msg.type === "setSelected") {
-      // expected: {start:{lng,lat}, stops:[{lng,lat}], end:{lng,lat}}
-      selected = msg.selected || { start:null, stops:[], end:null };
-      updateFlagsGeojson();
-    }
+  if (msg.type === "setLanguage") {
+    setLanguage(msg.lang); // "de" | "en" ...
+    return;
+  }
+
+  if (msg.type === "setSelected") {
+    // expected: {start:{lng,lat}, stops:[{lng,lat}], end:{lng,lat}}
+    selected = msg.selected || { start: null, stops: [], end: null };
+    updateFlagsGeojson();
+    return;
+  }
+
+  if (msg.type === "setRoute") {
+    // expected: stops: [{lng,lat}, ...]
+    updateRouteGeojson(msg.stops || []);
+    return;
+  }
+}
+
 
     if (msg.type === "setRoute") {
       updateRouteGeojson(msg.stops || []);
@@ -180,4 +196,5 @@
 </script>
 </body>
 </html>
+
 
