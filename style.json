@@ -4,15 +4,15 @@
   "sources": {
     "eu_countries": {
       "type": "geojson",
-      "data": "https://raw.githubusercontent.com/tdopjans-cell/map-data/refs/heads/main/Europe.json"
+      "data": "./Europe.json"
     },
     "de_states": {
       "type": "geojson",
-      "data": "https://raw.githubusercontent.com/tdopjans-cell/map-data/refs/heads/main/Germany.json"
+      "data": "./Germany.json"
     },
     "de_places": {
       "type": "geojson",
-      "data": "https://raw.githubusercontent.com/tdopjans-cell/map-data/refs/heads/main/Germany%20inner%20points.json"
+      "data": "./Germany inner points.json"
     },
     "route": {
       "type": "geojson",
@@ -131,3 +131,4 @@
     }
   ]
 }
+
