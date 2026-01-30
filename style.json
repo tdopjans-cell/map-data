@@ -1,38 +1,29 @@
 {
   "version": 8,
-  "name": "Minimal Interactive",
+  "name": "Minimal",
   "sources": {
     "eu_countries": {
       "type": "geojson",
-      "data": "./europe.json"
+      "data": "./Europe.json"
     },
     "de_states": {
       "type": "geojson",
-      "data": "./germany.json"
-    },
-    "de_places": {
-      "type": "geojson",
-      "data": "./germany_inner_points.json"
-    },
-    "route": {
-      "type": "geojson",
-      "data": { "type": "FeatureCollection", "features": [] }
-    },
-    "flags": {
-      "type": "geojson",
-      "data": { "type": "FeatureCollection", "features": [] }
+      "data": "./Germany.json"
     }
   },
   "layers": [
-    { "id": "bg", "type": "background", "paint": { "background-color": "rgba(0,0,0,0)" } },
+    {
+      "id": "bg",
+      "type": "background",
+      "paint": { "background-color": "#ffffff" }
+    },
 
-    // EUROPA Länder (Level Europe)
     {
       "id": "eu-countries-fill",
       "type": "fill",
       "source": "eu_countries",
       "layout": { "visibility": "visible" },
-      "paint": { "fill-color": "#ffffff", "fill-opacity": 0.02 }
+      "paint": { "fill-color": "#000000", "fill-opacity": 0.03 }
     },
     {
       "id": "eu-countries-line",
@@ -41,26 +32,13 @@
       "layout": { "visibility": "visible" },
       "paint": { "line-color": "#111111", "line-width": 1 }
     },
-    {
-      "id": "eu-country-labels",
-      "type": "symbol",
-      "source": "eu_countries",
-      "layout": {
-        "visibility": "visible",
-        "symbol-placement": "point",
-        "text-field": ["coalesce", ["get", "name_de"], ["get", "name"]],
-        "text-size": 12
-      },
-      "paint": { "text-color": "#111111", "text-halo-color": "#ffffff", "text-halo-width": 1 }
-    },
 
-    // DE Bundesländer (Level Germany)
     {
       "id": "de-states-fill",
       "type": "fill",
       "source": "de_states",
       "layout": { "visibility": "none" },
-      "paint": { "fill-color": "#ffffff", "fill-opacity": 0.02 }
+      "paint": { "fill-color": "#000000", "fill-opacity": 0.03 }
     },
     {
       "id": "de-states-line",
@@ -68,68 +46,6 @@
       "source": "de_states",
       "layout": { "visibility": "none" },
       "paint": { "line-color": "#111111", "line-width": 1 }
-    },
-    {
-      "id": "de-state-labels",
-      "type": "symbol",
-      "source": "de_states",
-      "layout": {
-        "visibility": "none",
-        "symbol-placement": "point",
-        "text-field": ["coalesce", ["get", "name_de"], ["get", "name"]],
-        "text-size": 12
-      },
-      "paint": { "text-color": "#111111", "text-halo-color": "#ffffff", "text-halo-width": 1 }
-    },
-
-    // Städte (Pins) – Level Germany
-    {
-      "id": "de-places",
-      "type": "circle",
-      "source": "de_places",
-      "layout": { "visibility": "none" },
-      "paint": { "circle-radius": 4, "circle-color": "#111111" }
-    },
-    {
-      "id": "de-place-labels",
-      "type": "symbol",
-      "source": "de_places",
-      "layout": {
-        "visibility": "none",
-        "text-field": ["coalesce", ["get", "name_de"], ["get", "name"]],
-        "text-size": 12,
-        "text-offset": [0, 1.0]
-      },
-      "paint": { "text-color": "#111111", "text-halo-color": "#ffffff", "text-halo-width": 1 }
-    },
-
-    // ROUTE (Linie) – wird per GeoJSON von Bubble gesetzt
-    {
-      "id": "route-line",
-      "type": "line",
-      "source": "route",
-      "layout": { "visibility": "visible" },
-      "paint": { "line-color": "#111111", "line-width": 2 }
-    },
-
-    // FLAGS – 1 Layer, Icon wird über "role" gewählt
-    {
-      "id": "flags",
-      "type": "symbol",
-      "source": "flags",
-      "layout": {
-        "visibility": "visible",
-        "icon-image": ["match", ["get", "role"],
-          "start", "flag-start",
-          "stop", "flag-stop",
-          "end", "flag-end",
-          "flag-stop"
-        ],
-        "icon-size": 1,
-        "icon-allow-overlap": true
-      }
     }
   ]
 }
-
-
