@@ -1,0 +1,182 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <style>
+    html, body { margin:0; height:100%; }
+    /* schöner Hintergrund-Verlauf (kannst du später easy anpassen) */
+    body {
+      background: linear-gradient(140deg, #f7f7f7 0%, #ffffff 45%, #f1f1f1 100%);
+    }
+    #map { width:100%; height:100%; }
+  </style>
+</head>
+<body>
+<div id="map"></div>
+
+<script>
+  const STYLE_URL = "./style.json";
+
+  let currentLevel = "europe"; // "europe" | "germany"
+  let currentLang = "de";
+
+  // in-memory state:
+  let selected = { start: null, stops: [], end: null };
+
+  const map = new maplibregl.Map({
+    container: "map",
+    style: STYLE_URL,
+    center: [12, 52],
+    zoom: 3.5,
+    attributionControl: false
+  });
+
+  function vis(id, on){ map.setLayoutProperty(id, "visibility", on ? "visible" : "none"); }
+
+  function setLevel(level){
+    currentLevel = level;
+
+    const showEurope = level === "europe";
+    const showGermany = level === "germany";
+
+    vis("eu-countries-fill", showEurope);
+    vis("eu-countries-line", showEurope);
+    vis("eu-country-labels", showEurope);
+
+    vis("de-states-fill", showGermany);
+    vis("de-states-line", showGermany);
+    vis("de-state-labels", showGermany);
+    vis("de-places", showGermany);
+    vis("de-place-labels", showGermany);
+
+    // Zoom Animation (feel-good)
+    if (level === "europe") map.flyTo({ center:[12,52], zoom:3.5, duration: 900 });
+    if (level === "germany") map.flyTo({ center:[10.5,51.2], zoom:5.8, duration: 900 });
+  }
+
+  function setLanguage(lang){
+    currentLang = lang;
+    const textExpr = ["coalesce", ["get", "name_" + lang], ["get", "name"]];
+    map.setLayoutProperty("eu-country-labels", "text-field", textExpr);
+    map.setLayoutProperty("de-state-labels", "text-field", textExpr);
+    map.setLayoutProperty("de-place-labels", "text-field", textExpr);
+  }
+
+  function featureId(p, fallbackId){
+    return (p.id || p.iso_a2 || p.iso_3166_2 || fallbackId || "").toString();
+  }
+  function featureName(p){
+    return (p["name_" + currentLang] || p.name || "").toString();
+  }
+
+  function emitSelect(payload){
+    window.parent.postMessage({ type: "select", payload }, "*");
+  }
+
+  function updateFlagsGeojson(){
+    // Flag-Position: im MVP nehmen wir die Klick-Position, die Bubble mitschickt.
+    // (Später kannst du Label-Points nutzen für perfekte Positionierung.)
+    const feats = [];
+
+    if (selected.start) feats.push({
+      type:"Feature",
+      geometry:{ type:"Point", coordinates:[selected.start.lng, selected.start.lat] },
+      properties:{ role:"start" }
+    });
+
+    for (const s of selected.stops || []) feats.push({
+      type:"Feature",
+      geometry:{ type:"Point", coordinates:[s.lng, s.lat] },
+      properties:{ role:"stop" }
+    });
+
+    if (selected.end) feats.push({
+      type:"Feature",
+      geometry:{ type:"Point", coordinates:[selected.end.lng, selected.end.lat] },
+      properties:{ role:"end" }
+    });
+
+    const fc = { type:"FeatureCollection", features: feats };
+    const src = map.getSource("flags");
+    if (src) src.setData(fc);
+  }
+
+  function updateRouteGeojson(stops){
+    const coords = (stops || []).map(s => [s.lng, s.lat]).filter(c => isFinite(c[0]) && isFinite(c[1]));
+    const fc = {
+      type:"FeatureCollection",
+      features: coords.length >= 2 ? [{
+        type:"Feature",
+        geometry:{ type:"LineString", coordinates: coords },
+        properties:{}
+      }] : []
+    };
+    const src = map.getSource("route");
+    if (src) src.setData(fc);
+  }
+
+  async function addIcon(name, url){
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = url;
+    await img.decode();
+    map.addImage(name, img);
+  }
+
+  map.on("load", async () => {
+    // Icons laden
+    await addIcon("flag-start", "./icons/flag_start.png");
+    await addIcon("flag-stop", "./icons/flag_stop.png");
+    await addIcon("flag-end", "./icons/flag_end.png");
+
+    setLanguage(currentLang);
+    setLevel(currentLevel);
+    updateFlagsGeojson();
+  });
+
+  map.on("click", (e) => {
+    const layers = currentLevel === "germany"
+      ? ["de-states-fill", "de-places"]
+      : ["eu-countries-fill"];
+
+    const feats = map.queryRenderedFeatures(e.point, { layers });
+    if (!feats.length) return;
+
+    const f = feats[0];
+    const p = f.properties || {};
+    const id = featureId(p, f.id);
+    const name = featureName(p);
+    const kind = (f.layer.id === "de-places") ? "city" : "area";
+
+    emitSelect({
+      id, name, kind,
+      level: currentLevel,
+      lng: e.lngLat.lng,
+      lat: e.lngLat.lat
+    });
+  });
+
+  // Bubble -> Map
+  window.addEventListener("message", (ev) => {
+    const msg = ev.data;
+    if (!msg || typeof msg !== "object") return;
+
+    if (msg.type === "setLevel") setLevel(msg.level);
+    if (msg.type === "setLanguage") setLanguage(msg.lang);
+
+    if (msg.type === "setSelected") {
+      // expected: {start:{lng,lat}, stops:[{lng,lat}], end:{lng,lat}}
+      selected = msg.selected || { start:null, stops:[], end:null };
+      updateFlagsGeojson();
+    }
+
+    if (msg.type === "setRoute") {
+      updateRouteGeojson(msg.stops || []);
+    }
+  });
+</script>
+</body>
+</html>
