@@ -38,11 +38,6 @@
       "type": "background",
       "paint": { "background-color": "rgba(0,0,0,0)" }
     },
-
-    /* =========================
-       EUROPE (Level: europe)
-       ========================= */
-
     {
       "id": "eu-countries-fill",
       "type": "fill",
@@ -75,11 +70,6 @@
         "text-halo-width": 1
       }
     },
-
-    /* =========================
-       GERMANY (Level: germany)
-       ========================= */
-
     {
       "id": "de-states-fill",
       "type": "fill",
@@ -94,8 +84,6 @@
       "layout": { "visibility": "none" },
       "paint": { "line-color": "#111111", "line-width": 1 }
     },
-
-    /* Bundesländer-Labels: aus deiner Punkte-Datei */
     {
       "id": "de-state-labels",
       "type": "symbol",
@@ -114,8 +102,6 @@
         "text-halo-width": 1
       }
     },
-
-    /* (später) Städte */
     {
       "id": "de-places",
       "type": "circle",
@@ -146,11 +132,6 @@
         "text-halo-width": 1
       }
     },
-
-    /* =========================
-       SELECTED HIGHLIGHTS (role outlines)
-       ========================= */
-
     {
       "id": "selected-fill",
       "type": "fill",
@@ -158,7 +139,6 @@
       "layout": { "visibility": "visible" },
       "paint": { "fill-color": "#ffffff", "fill-opacity": 0.03 }
     },
-
     {
       "id": "selected-outline-start-wide",
       "type": "line",
@@ -175,7 +155,6 @@
       "layout": { "visibility": "visible" },
       "paint": { "line-color": "#111111", "line-width": 2 }
     },
-
     {
       "id": "selected-outline-stop-wide",
       "type": "line",
@@ -192,7 +171,6 @@
       "layout": { "visibility": "visible" },
       "paint": { "line-color": "#111111", "line-width": 2 }
     },
-
     {
       "id": "selected-outline-end-wide",
       "type": "line",
@@ -209,11 +187,6 @@
       "layout": { "visibility": "visible" },
       "paint": { "line-color": "#111111", "line-width": 2 }
     },
-
-    /* =========================
-       ROUTE (line)
-       ========================= */
-
     {
       "id": "route-line",
       "type": "line",
@@ -221,25 +194,13 @@
       "layout": { "visibility": "visible" },
       "paint": { "line-color": "#111111", "line-width": 2, "line-opacity": 1 }
     },
-
-    /* =========================
-       FLAGS (icons)
-       ========================= */
-
     {
       "id": "flags",
       "type": "symbol",
       "source": "flags",
       "layout": {
         "visibility": "visible",
-        "icon-image": [
-          "match",
-          ["get", "role"],
-          "start", "flag-start",
-          "stop", "flag-stop",
-          "end", "flag-end",
-          "flag-stop"
-        ],
+        "icon-image": ["match", ["get", "role"], "start", "flag-start", "stop", "flag-stop", "end", "flag-end", "flag-stop"],
         "icon-size": 1,
         "icon-allow-overlap": true
       }
