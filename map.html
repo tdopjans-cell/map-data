@@ -144,8 +144,18 @@ map.on("click", (e) => {
 
   const f = feats[0];
   const p = f.properties || {};
-
-  const id = (p.id || p.iso_a2 || p.iso_3166_2 || f.id || "").toString();
+  const rawId =
+    p.id ??
+    p.ISO_A2 ??
+    p.ISO_A3 ??
+    p.ADM0_A3 ??
+    p.ADM1_CODE ??
+    p.HASC_1 ??
+    p.NAME_1 ??
+    p.NAME ??
+    p.name;
+  
+  const id = rawId ? String(rawId) : `${currentLevel}:${name}`;
   const name = (p.NAME_DE || p.NAME || p.name_de || p.name || "").toString();
   const kind = (f.layer && f.layer.id === "de-places") ? "city" : "area";
 
@@ -186,6 +196,7 @@ map.on("load", async () => {
 </script>
 </body>
 </html>
+
 
 
 
