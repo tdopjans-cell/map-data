@@ -5,17 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-  <style>
-    html, body { margin:0; height:100%; }
-    /* schöner Hintergrund-Verlauf (kannst du später easy anpassen) */
-    body {
-      background: linear-gradient(140deg, #f7f7f7 0%, #ffffff 45%, #f1f1f1 100%);
-    }
-    #map { width:100%; height:100%; }
-  </style>
-</head>
-<body>
-<div id="map"></div>
+  <div id="wrap">
+  <div id="bg"></div>
+  <div id="map"></div>
+</div>
+
+<style>
+  #wrap { position: relative; width: 100%; height: 100vh; }
+  #bg, #map { position: absolute; inset: 0; }
+  #bg canvas { filter: blur(14px) saturate(1.25) contrast(1.05) brightness(1.05); transform: scale(1.06); }
+  /* scale verhindert harte Blur-Ränder am Rand */
+</style>
+
 
 <script>
  const STYLE_URL = "./style.json";
@@ -191,6 +192,7 @@ map.on("load", async () => {
 </script>
 </body>
 </html>
+
 
 
 
