@@ -143,22 +143,19 @@ map.on("click", (e) => {
   if (!feats.length) return;
 
   const f = feats[0];
-  const p = f.properties || {};
-  const rawId =
-    p.id ??
-    p.ISO_A2 ??
-    p.ISO_A3 ??
-    p.ADM0_A3 ??
-    p.ADM1_CODE ??
-    p.HASC_1 ??
-    p.NAME_1 ??
-    p.NAME ??
-    p.name;
-  
-const id = currentLevel === "europe"
-  ? String(p.ISO_A2 || p.ADM0_A3 || name)
-  : String(p.ISO_3166_2 || p.HASC_1 || p.NAME_1 || p.NAME || name);
-  const name = (p.NAME_DE || p.NAME || p.name_de || p.name || "").toString();
+  const p = f.properties || {};  
+// Name: Europa vs. Deutschland haben unterschiedliche Property-Keys
+const name =
+  currentLevel === "germany"
+    ? String(p.NAME_1 || p.NAME_DE || p.NAME || p.name_de || p.name || "")
+    : String(p.NAME_DE || p.NAME || p.name_de || p.name || "");
+
+// ID: Europa nutzt ISO_A2, Deutschland probiert ISO_3166_2/HASC_1, sonst NAME_1
+const id =
+  currentLevel === "europe"
+    ? String(p.ISO_A2 || p.ADM0_A3 || name)
+    : String(p.ISO_3166_2 || p.HASC_1 || p.NAME_1 || p.NAME || name);
+
   const kind = (f.layer && f.layer.id === "de-places") ? "city" : "area";
 
   window.parent.postMessage({
@@ -198,6 +195,7 @@ map.on("load", async () => {
 </script>
 </body>
 </html>
+
 
 
 
