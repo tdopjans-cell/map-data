@@ -155,7 +155,9 @@ map.on("click", (e) => {
     p.NAME ??
     p.name;
   
-  const id = rawId ? String(rawId) : `${currentLevel}:${name}`;
+const id = currentLevel === "europe"
+  ? String(p.ISO_A2 || p.ADM0_A3 || name)
+  : String(p.ISO_3166_2 || p.HASC_1 || p.NAME_1 || p.NAME || name);
   const name = (p.NAME_DE || p.NAME || p.name_de || p.name || "").toString();
   const kind = (f.layer && f.layer.id === "de-places") ? "city" : "area";
 
@@ -196,6 +198,7 @@ map.on("load", async () => {
 </script>
 </body>
 </html>
+
 
 
 
