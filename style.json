@@ -34,23 +34,37 @@
   },
   "layers": [
     {
-      "id": "bg",
-      "type": "background",
-      "paint": { "background-color": "rgba(0,0,0,0)" }
-    },
+  "id": "bg",
+  "type": "background",
+  "paint": {
+    "background-color": "#f6f4ef"
+  }
+},
     {
       "id": "eu-countries-fill",
       "type": "fill",
       "source": "eu_countries",
       "layout": { "visibility": "visible" },
-      "paint": { "fill-color": "#ffffff", "fill-opacity": 0.02 }
+      "paint": {
+  "fill-color": [
+    "case",
+    ["boolean", ["feature-state", "hover"], false],
+    "#e9e3d6",
+    "#f2ede2"
+  ],
+  "fill-opacity": 1
+}
     },
     {
       "id": "eu-countries-line",
       "type": "line",
       "source": "eu_countries",
       "layout": { "visibility": "visible" },
-      "paint": { "line-color": "#111111", "line-width": 1 }
+      "paint": {
+  "line-color": "#2b2b2b",
+  "line-width": 1,
+  "line-opacity": 0.7
+}
     },
     {
       "id": "eu-country-labels",
@@ -75,14 +89,26 @@
       "type": "fill",
       "source": "de_states",
       "layout": { "visibility": "none" },
-      "paint": { "fill-color": "#ffffff", "fill-opacity": 0.02 }
+      "paint": {
+  "fill-color": [
+    "case",
+    ["boolean", ["feature-state", "hover"], false],
+    "#e9e3d6",
+    "#f2ede2"
+  ],
+  "fill-opacity": 1
+}
     },
     {
       "id": "de-states-line",
       "type": "line",
       "source": "de_states",
       "layout": { "visibility": "none" },
-      "paint": { "line-color": "#111111", "line-width": 1 }
+      "paint": {
+  "line-color": "#2b2b2b",
+  "line-width": 1,
+  "line-opacity": 0.75
+}
     },
     {
       "id": "de-state-labels",
@@ -207,3 +233,4 @@
     }
   ]
 }
+
