@@ -178,6 +178,7 @@ window.addEventListener("message", (ev) => {
     updateRouteGeojson(msg.stops || []);
   }
 });
+console.log("MAP GOT MESSAGE:", msg);
 
 map.on("load", async () => {
   // Icons liegen im Root:
@@ -192,6 +193,7 @@ map.on("load", async () => {
 </script>
 </body>
 </html>
+
 
 
 
