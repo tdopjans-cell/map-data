@@ -5,306 +5,295 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+
+  <style>
+    html, body { height: 100%; margin: 0; }
+    #wrap { position: relative; width: 100%; height: 100vh; overflow: hidden; }
+    #map { position: absolute; inset: 0; }
+    #routeCanvas { position:absolute; inset:0; pointer-events:none; z-index:50; }
+  </style>
+</head>
+
+<body>
   <div id="wrap">
-  <div id="bg"></div>
-  <div id="map"></div>
-  <canvas id="routeCanvas" style="position:absolute; inset:0; pointer-events:none; z-index:50;"></canvas>
-</div>
+    <div id="map"></div>
+    <canvas id="routeCanvas"></canvas>
+  </div>
 
-<style>
-  #wrap { position: relative; width: 100%; height: 100vh; }
-  #bg, #map { position: absolute; inset: 0; }
-  #bg canvas { filter: blur(14px) saturate(1.25) contrast(1.05) brightness(1.05); transform: scale(1.06); }
-  /* scale verhindert harte Blur-Ränder am Rand */
-</style>
+  <script>
+    const STYLE_URL = "./style.json";
 
+    let currentLevel = "europe";
+    let currentLang = "de";
 
-<script>
- const STYLE_URL = "./style.json";
+    // state from Bubble
+    let selected = { start: null, stops: [], end: null };
 
-let currentLevel = "europe";
-let currentLang = "de";
+    // Canvas route state
+    let lastRouteStops = []; // [{lng,lat}, ...]
 
-// state from Bubble
-let selected = { start: null, stops: [], end: null };
+    const map = new maplibregl.Map({
+      container: "map",
+      style: STYLE_URL,
+      center: [12, 52],
+      zoom: 3.5,
+      attributionControl: false
+    });
 
-const map = new maplibregl.Map({
-  container: "map",
-  style: STYLE_URL,
-  center: [12, 52],
-  zoom: 3.5,
-  attributionControl: false
-});
-  const canvas = document.getElementById("routeCanvas");
-const ctx = canvas.getContext("2d");
+    // ===== Canvas Setup =====
+    const canvas = document.getElementById("routeCanvas");
+    const ctx = canvas.getContext("2d");
 
-function resizeCanvas() {
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  canvas.width = Math.round(rect.width * dpr);
-  canvas.height = Math.round(rect.height * dpr);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in CSS pixels
-}
-
-window.addEventListener("resize", () => { resizeCanvas(); drawRouteArrows(); });
-map.on("resize", () => { resizeCanvas(); drawRouteArrows(); });
-
-resizeCanvas();
-  
-function drawPlayfulArrow(ax, ay, bx, by) {
-  // ax,ay -> start pixel; bx,by -> end pixel
-  const dx = bx - ax, dy = by - ay;
-  const dist = Math.hypot(dx, dy);
-  if (dist < 8) return;
-
-  // Parameter abhängig von Distanz
-  const shaftW = Math.max(6, Math.min(14, dist * 0.05));     // dicke
-  const headL  = Math.max(14, Math.min(34, dist * 0.18));    // kopflänge
-  const headW  = shaftW * 2.2;                               // kopfbreite
-  const radius = shaftW * 0.6;                               // rundung
-
-  const ux = dx / dist, uy = dy / dist;       // unit dir
-  const px = -uy, py = ux;                    // unit perp
-
-  // Endpunkt etwas zurückziehen, damit Spitze nicht “über” Flagge sitzt
-  const endBack = 22;
-  const ex = bx - ux * endBack;
-  const ey = by - uy * endBack;
-
-  // Startpunkt etwas nach vorne, damit Pfeil nicht unter Flagge verschwindet
-  const startFwd = 22;
-  const sx = ax + ux * startFwd;
-  const sy = ay + uy * startFwd;
-
-  // Kopf-Basis
-  const hx = ex - ux * headL;
-  const hy = ey - uy * headL;
-
-  // Punkte links/rechts am Schaft
-  const sL = { x: sx + px * (shaftW/2), y: sy + py * (shaftW/2) };
-  const sR = { x: sx - px * (shaftW/2), y: sy - py * (shaftW/2) };
-  const hL = { x: hx + px * (shaftW/2), y: hy + py * (shaftW/2) };
-  const hR = { x: hx - px * (shaftW/2), y: hy - py * (shaftW/2) };
-
-  // Kopf-Flügel
-  const kL = { x: hx + px * (headW/2), y: hy + py * (headW/2) };
-  const kR = { x: hx - px * (headW/2), y: hy - py * (headW/2) };
-
-  // Farbe (später: je Segment anders möglich)
-  ctx.save();
-
-  // leichter Shadow wie im Beispiel
-  ctx.shadowColor = "rgba(0,0,0,0.18)";
-  ctx.shadowBlur = 6;
-  ctx.shadowOffsetX = 1;
-  ctx.shadowOffsetY = 2;
-
-  // Fill
-  ctx.fillStyle = "#39c35a";        // grün – später dynamisch
-  ctx.strokeStyle = "#0b2220";      // dunkler Rand
-  ctx.lineWidth = 2;
-
-  ctx.beginPath();
-
-  // Start rund
-  ctx.moveTo(sL.x, sL.y);
-  ctx.lineTo(hL.x, hL.y);
-  ctx.lineTo(kL.x, kL.y);
-  ctx.lineTo(ex, ey);              // Spitze
-  ctx.lineTo(kR.x, kR.y);
-  ctx.lineTo(hR.x, hR.y);
-  ctx.lineTo(sR.x, sR.y);
-
-  ctx.closePath();
-
-  ctx.fill();
-  ctx.stroke();
-
-  ctx.restore();
-}
-  // ===== Canvas Route Arrows (C) Draw Route =====
-function drawRouteArrows() {
-  clearCanvas();
-
-  if (!Array.isArray(lastRouteStops) || lastRouteStops.length < 2) return;
-
-  for (let i = 0; i < lastRouteStops.length - 1; i++) {
-    const a = lastRouteStops[i];
-    const b = lastRouteStops[i + 1];
-    if (!a || !b) continue;
-
-    const pA = map.project([a.lng, a.lat]);
-    const pB = map.project([b.lng, b.lat]);
-
-    // Farben je Segment (optional)
-    const color = (i === 0) ? "#39c35a" : "#f2c94c"; // grün, dann gelb
-    drawPlayfulArrow(pA.x, pA.y, pB.x, pB.y, color);
-  }
-}
-
-// Bei Bewegung/Zoom neu zeichnen
-map.on("move", drawRouteArrows);
-map.on("zoom", drawRouteArrows);
-// ===========================================
-
-function safeSetVisibility(id, visible) {
-  try {
-    if (map.getLayer(id)) {
-      map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
+    function resizeCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in CSS pixels
     }
-  } catch (e) {
-    console.warn("visibility fail", id, e);
-  }
-}
 
-function setLevel(level) {
-  currentLevel = level;
+    function clearCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
 
-  const showEurope = level === "europe";
-  const showGermany = level === "germany";
-
-  safeSetVisibility("eu-countries-fill", showEurope);
-  safeSetVisibility("eu-countries-line", showEurope);
-  safeSetVisibility("eu-country-labels", showEurope);
-
-  safeSetVisibility("de-states-fill", showGermany);
-  safeSetVisibility("de-states-line", showGermany);
-  safeSetVisibility("de-state-labels", showGermany);
-  safeSetVisibility("de-places", showGermany);
-  safeSetVisibility("de-place-labels", showGermany);
-
-  if (level === "europe") map.flyTo({ center: [12, 52], zoom: 3.5, duration: 900 });
-  if (level === "germany") map.flyTo({ center: [10.5, 51.2], zoom: 5.8, duration: 900 });
-}
-
-function setLanguage(lang) {
-  currentLang = lang;
-  // MVP: wir lassen das -Feld (coalesce) wie es ist.
-  // Optional später: dynamisch auf NAME_DE / NAME_EN etc. umstellen.
-}
-
-async function addIconSafe(name, url) {
-  try {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.src = url;
-    await img.decode();
-    if (!map.hasImage(name)) map.addImage(name, img);
-  } catch (e) {
-    console.warn("Icon konnte nicht geladen werden:", name, url);
-  }
-}
-
-function updateFlagsGeojson() {
-  const feats = [];
-
-  if (selected.start && isFinite(selected.start.lng) && isFinite(selected.start.lat)) {
-    feats.push({
-      type: "Feature",
-      geometry: { type: "Point", coordinates: [selected.start.lng, selected.start.lat] },
-      properties: { role: "start" }
+    window.addEventListener("resize", () => {
+      resizeCanvas();
+      drawRouteArrows();
     });
-  }
 
-  for (const s of (selected.stops || [])) {
-    if (!s || !isFinite(s.lng) || !isFinite(s.lat)) continue;
-    feats.push({
-      type: "Feature",
-      geometry: { type: "Point", coordinates: [s.lng, s.lat] },
-      properties: { role: "stop" }
+    map.on("resize", () => {
+      resizeCanvas();
+      drawRouteArrows();
     });
-  }
 
-  if (selected.end && isFinite(selected.end.lng) && isFinite(selected.end.lat)) {
-    feats.push({
-      type: "Feature",
-      geometry: { type: "Point", coordinates: [selected.end.lng, selected.end.lat] },
-      properties: { role: "end" }
+    resizeCanvas();
+
+    // ===== Arrow Drawing (spielrisch) =====
+    function drawPlayfulArrow(ax, ay, bx, by, fillColor = "#39c35a") {
+      const dx = bx - ax, dy = by - ay;
+      const dist = Math.hypot(dx, dy);
+      if (dist < 20) return;
+
+      // Parameter abhängig von Distanz (wenige größere Pfeile)
+      const shaftW = Math.max(8, Math.min(16, dist * 0.05));
+      const headL  = Math.max(18, Math.min(42, dist * 0.22));
+      const headW  = shaftW * 2.4;
+
+      const ux = dx / dist, uy = dy / dist;
+      const px = -uy, py = ux;
+
+      // Abstand zu Flaggen
+      const endBack = 26;
+      const startFwd = 26;
+
+      const ex = bx - ux * endBack;
+      const ey = by - uy * endBack;
+      const sx = ax + ux * startFwd;
+      const sy = ay + uy * startFwd;
+
+      const hx = ex - ux * headL;
+      const hy = ey - uy * headL;
+
+      const sL = { x: sx + px * (shaftW/2), y: sy + py * (shaftW/2) };
+      const sR = { x: sx - px * (shaftW/2), y: sy - py * (shaftW/2) };
+      const hL = { x: hx + px * (shaftW/2), y: hy + py * (shaftW/2) };
+      const hR = { x: hx - px * (shaftW/2), y: hy - py * (shaftW/2) };
+
+      const kL = { x: hx + px * (headW/2), y: hy + py * (headW/2) };
+      const kR = { x: hx - px * (headW/2), y: hy - py * (headW/2) };
+
+      ctx.save();
+
+      // Shadow
+      ctx.shadowColor = "rgba(0,0,0,0.18)";
+      ctx.shadowBlur = 6;
+      ctx.shadowOffsetX = 1;
+      ctx.shadowOffsetY = 2;
+
+      ctx.fillStyle = fillColor;
+      ctx.strokeStyle = "rgba(10, 30, 30, 0.9)";
+      ctx.lineWidth = 2;
+
+      ctx.beginPath();
+      ctx.moveTo(sL.x, sL.y);
+      ctx.lineTo(hL.x, hL.y);
+      ctx.lineTo(kL.x, kL.y);
+      ctx.lineTo(ex, ey);
+      ctx.lineTo(kR.x, kR.y);
+      ctx.lineTo(hR.x, hR.y);
+      ctx.lineTo(sR.x, sR.y);
+      ctx.closePath();
+
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function drawRouteArrows() {
+      clearCanvas();
+      if (!Array.isArray(lastRouteStops) || lastRouteStops.length < 2) return;
+
+      for (let i = 0; i < lastRouteStops.length - 1; i++) {
+        const a = lastRouteStops[i];
+        const b = lastRouteStops[i + 1];
+        if (!a || !b) continue;
+
+        const pA = map.project([a.lng, a.lat]);
+        const pB = map.project([b.lng, b.lat]);
+
+        // Farben je Segment: Start->Stop grün, Stop->End gelb (optional)
+        const color = (i === 0) ? "#39c35a" : "#f2c94c";
+        drawPlayfulArrow(pA.x, pA.y, pB.x, pB.y, color);
+      }
+    }
+
+    map.on("move", drawRouteArrows);
+    map.on("zoom", drawRouteArrows);
+
+    // ===== Map layer helpers =====
+    function safeSetVisibility(id, visible) {
+      try {
+        if (map.getLayer(id)) {
+          map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
+        }
+      } catch (e) {
+        console.warn("visibility fail", id, e);
+      }
+    }
+
+    function setLevel(level) {
+      currentLevel = level;
+
+      const showEurope = level === "europe";
+      const showGermany = level === "germany";
+
+      safeSetVisibility("eu-countries-fill", showEurope);
+      safeSetVisibility("eu-countries-line", showEurope);
+      safeSetVisibility("eu-country-labels", showEurope);
+
+      safeSetVisibility("de-states-fill", showGermany);
+      safeSetVisibility("de-states-line", showGermany);
+      safeSetVisibility("de-state-labels", showGermany);
+      safeSetVisibility("de-places", showGermany);
+      safeSetVisibility("de-place-labels", showGermany);
+
+      if (level === "europe") map.flyTo({ center: [12, 52], zoom: 3.5, duration: 900 });
+      if (level === "germany") map.flyTo({ center: [10.5, 51.2], zoom: 5.8, duration: 900 });
+    }
+
+    function setLanguage(lang) {
+      currentLang = lang;
+    }
+
+    async function addIconSafe(name, url) {
+      try {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = url;
+        await img.decode();
+        if (!map.hasImage(name)) map.addImage(name, img);
+      } catch (e) {
+        console.warn("Icon konnte nicht geladen werden:", name, url);
+      }
+    }
+
+    function updateFlagsGeojson() {
+      const feats = [];
+
+      if (selected.start && isFinite(selected.start.lng) && isFinite(selected.start.lat)) {
+        feats.push({
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [selected.start.lng, selected.start.lat] },
+          properties: { role: "start" }
+        });
+      }
+
+      for (const s of (selected.stops || [])) {
+        if (!s || !isFinite(s.lng) || !isFinite(s.lat)) continue;
+        feats.push({
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [s.lng, s.lat] },
+          properties: { role: "stop" }
+        });
+      }
+
+      if (selected.end && isFinite(selected.end.lng) && isFinite(selected.end.lat)) {
+        feats.push({
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [selected.end.lng, selected.end.lat] },
+          properties: { role: "end" }
+        });
+      }
+
+      const fc = { type: "FeatureCollection", features: feats };
+      const src = map.getSource("flags");
+      if (src) src.setData(fc);
+    }
+
+    // ===== Map -> Bubble (select) =====
+    map.on("click", (e) => {
+      const layers = currentLevel === "germany"
+        ? ["de-states-fill", "de-places"]
+        : ["eu-countries-fill"];
+
+      const feats = map.queryRenderedFeatures(e.point, { layers });
+      if (!feats.length) return;
+
+      const f = feats[0];
+      const p = f.properties || {};
+
+      const name =
+        currentLevel === "germany"
+          ? String(p.NAME_1 || p.NAME_DE || p.NAME || p.name_de || p.name || "")
+          : String(p.NAME_DE || p.NAME || p.name_de || p.name || "");
+
+      const id =
+        currentLevel === "europe"
+          ? String(p.ISO_A2 || name)
+          : String(p.ISO_3166_2 || name);
+
+      const kind = (f.layer && f.layer.id === "de-places") ? "city" : "area";
+
+      window.parent.postMessage({
+        type: "select",
+        payload: { id, name, kind, level: currentLevel, lng: e.lngLat.lng, lat: e.lngLat.lat }
+      }, "*");
     });
-  }
 
-  const fc = { type: "FeatureCollection", features: feats };
-  const src = map.getSource("flags");
-  if (src) src.setData(fc);
-}
+    // ===== Bubble -> Map =====
+    window.addEventListener("message", (ev) => {
+      const msg = ev.data;
+      if (!msg || typeof msg !== "object") return;
 
-function updateRouteGeojson(stops) {
-  const coords = (stops || [])
-    .map(s => [s.lng, s.lat])
-    .filter(c => isFinite(c[0]) && isFinite(c[1]));
+      if (msg.type === "setLevel") setLevel(msg.level);
+      if (msg.type === "setLanguage") setLanguage(msg.lang);
 
-  const fc = {
-    type: "FeatureCollection",
-    features: coords.length >= 2 ? [{
-      type: "Feature",
-      geometry: { type: "LineString", coordinates: coords },
-      properties: {}
-    }] : []
-  };
+      if (msg.type === "setSelected") {
+        selected = msg.selected || { start: null, stops: [], end: null };
+        updateFlagsGeojson();
+      }
 
-  const src = map.getSource("route");
-  if (src) src.setData(fc);
-}
+      if (msg.type === "setRoute") {
+        lastRouteStops = (msg.stops || [])
+          .filter(p => p && Number.isFinite(p.lng) && Number.isFinite(p.lat));
+        drawRouteArrows();
+      }
+    });
 
-// Map -> Bubble (select)
-map.on("click", (e) => {
-  const layers = currentLevel === "germany"
-    ? ["de-states-fill", "de-places"]
-    : ["eu-countries-fill"];
+    map.on("load", async () => {
+      await addIconSafe("flag-start", "./flag_start.png");
+      await addIconSafe("flag-stop", "./flag_stop.png");
+      await addIconSafe("flag-end", "./flag_end.png");
 
-  const feats = map.queryRenderedFeatures(e.point, { layers });
-  if (!feats.length) return;
-
-  const f = feats[0];
-  const p = f.properties || {};  
-const name =
-  currentLevel === "germany"
-    ? String(p.NAME_1 || p.NAME_DE || p.NAME || p.name_de || p.name || "")
-    : String(p.NAME_DE || p.NAME || p.name_de || p.name || "");
-const id =
-  currentLevel === "europe"
-    ? String(p.ISO_A2 || name)
-    : String(p.ISO_3166_2 || name);
-  const kind = (f.layer && f.layer.id === "de-places") ? "city" : "area";
-
-  window.parent.postMessage({
-    type: "select",
-    payload: { id, name, kind, level: currentLevel, lng: e.lngLat.lng, lat: e.lngLat.lat }
-  }, "*");
-});
-
-// Bubble -> Map
-window.addEventListener("message", (ev) => {
-  const msg = ev.data;
-  if (!msg || typeof msg !== "object") return;
-
-  if (msg.type === "setLevel") setLevel(msg.level);
-  if (msg.type === "setLanguage") setLanguage(msg.lang);
-
-  if (msg.type === "setSelected") {
-    selected = msg.selected || { start: null, stops: [], end: null };
-    updateFlagsGeojson();
-  }
-
-  if (msg.type === "setRoute") {
-    lastRouteStops = (msg.stops || [])
-    .filter(p => p && Number.isFinite(p.lng) && Number.isFinite(p.lat));
-    drawRouteArrows();
-});
-
-map.on("load", async () => {
-  // Icons liegen im Root:
-  await addIconSafe("flag-start", "./flag_start.png");
-  await addIconSafe("flag-stop", "./flag_stop.png");
-  await addIconSafe("flag-end", "./flag_end.png");
-
-  setLevel(currentLevel);
-  updateFlagsGeojson();
-});
-
-</script>
+      setLevel(currentLevel);
+      updateFlagsGeojson();
+      drawRouteArrows();
+    });
+  </script>
 </body>
 </html>
+
 
 
 
