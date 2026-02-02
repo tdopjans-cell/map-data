@@ -35,6 +35,117 @@ const map = new maplibregl.Map({
   zoom: 3.5,
   attributionControl: false
 });
+  const canvas = document.getElementById("routeCanvas");
+const ctx = canvas.getContext("2d");
+
+function resizeCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = Math.round(rect.width * dpr);
+  canvas.height = Math.round(rect.height * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in CSS pixels
+}
+
+window.addEventListener("resize", () => { resizeCanvas(); drawRouteArrows(); });
+map.on("resize", () => { resizeCanvas(); drawRouteArrows(); });
+
+resizeCanvas();
+  
+function drawPlayfulArrow(ax, ay, bx, by) {
+  // ax,ay -> start pixel; bx,by -> end pixel
+  const dx = bx - ax, dy = by - ay;
+  const dist = Math.hypot(dx, dy);
+  if (dist < 8) return;
+
+  // Parameter abhängig von Distanz
+  const shaftW = Math.max(6, Math.min(14, dist * 0.05));     // dicke
+  const headL  = Math.max(14, Math.min(34, dist * 0.18));    // kopflänge
+  const headW  = shaftW * 2.2;                               // kopfbreite
+  const radius = shaftW * 0.6;                               // rundung
+
+  const ux = dx / dist, uy = dy / dist;       // unit dir
+  const px = -uy, py = ux;                    // unit perp
+
+  // Endpunkt etwas zurückziehen, damit Spitze nicht “über” Flagge sitzt
+  const endBack = 22;
+  const ex = bx - ux * endBack;
+  const ey = by - uy * endBack;
+
+  // Startpunkt etwas nach vorne, damit Pfeil nicht unter Flagge verschwindet
+  const startFwd = 22;
+  const sx = ax + ux * startFwd;
+  const sy = ay + uy * startFwd;
+
+  // Kopf-Basis
+  const hx = ex - ux * headL;
+  const hy = ey - uy * headL;
+
+  // Punkte links/rechts am Schaft
+  const sL = { x: sx + px * (shaftW/2), y: sy + py * (shaftW/2) };
+  const sR = { x: sx - px * (shaftW/2), y: sy - py * (shaftW/2) };
+  const hL = { x: hx + px * (shaftW/2), y: hy + py * (shaftW/2) };
+  const hR = { x: hx - px * (shaftW/2), y: hy - py * (shaftW/2) };
+
+  // Kopf-Flügel
+  const kL = { x: hx + px * (headW/2), y: hy + py * (headW/2) };
+  const kR = { x: hx - px * (headW/2), y: hy - py * (headW/2) };
+
+  // Farbe (später: je Segment anders möglich)
+  ctx.save();
+
+  // leichter Shadow wie im Beispiel
+  ctx.shadowColor = "rgba(0,0,0,0.18)";
+  ctx.shadowBlur = 6;
+  ctx.shadowOffsetX = 1;
+  ctx.shadowOffsetY = 2;
+
+  // Fill
+  ctx.fillStyle = "#39c35a";        // grün – später dynamisch
+  ctx.strokeStyle = "#0b2220";      // dunkler Rand
+  ctx.lineWidth = 2;
+
+  ctx.beginPath();
+
+  // Start rund
+  ctx.moveTo(sL.x, sL.y);
+  ctx.lineTo(hL.x, hL.y);
+  ctx.lineTo(kL.x, kL.y);
+  ctx.lineTo(ex, ey);              // Spitze
+  ctx.lineTo(kR.x, kR.y);
+  ctx.lineTo(hR.x, hR.y);
+  ctx.lineTo(sR.x, sR.y);
+
+  ctx.closePath();
+
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.restore();
+}
+  // ===== Canvas Route Arrows (C) Draw Route =====
+function drawRouteArrows() {
+  clearCanvas();
+
+  if (!Array.isArray(lastRouteStops) || lastRouteStops.length < 2) return;
+
+  for (let i = 0; i < lastRouteStops.length - 1; i++) {
+    const a = lastRouteStops[i];
+    const b = lastRouteStops[i + 1];
+    if (!a || !b) continue;
+
+    const pA = map.project([a.lng, a.lat]);
+    const pB = map.project([b.lng, b.lat]);
+
+    // Farben je Segment (optional)
+    const color = (i === 0) ? "#39c35a" : "#f2c94c"; // grün, dann gelb
+    drawPlayfulArrow(pA.x, pA.y, pB.x, pB.y, color);
+  }
+}
+
+// Bei Bewegung/Zoom neu zeichnen
+map.on("move", drawRouteArrows);
+map.on("zoom", drawRouteArrows);
+// ===========================================
 
 function safeSetVisibility(id, visible) {
   try {
@@ -68,7 +179,7 @@ function setLevel(level) {
 
 function setLanguage(lang) {
   currentLang = lang;
-  // MVP: wir lassen das Style-Feld (coalesce) wie es ist.
+  // MVP: wir lassen das -Feld (coalesce) wie es ist.
   // Optional später: dynamisch auf NAME_DE / NAME_EN etc. umstellen.
 }
 
@@ -176,8 +287,9 @@ window.addEventListener("message", (ev) => {
   }
 
   if (msg.type === "setRoute") {
-    updateRouteGeojson(msg.stops || []);
-  }
+    lastRouteStops = (msg.stops || [])
+    .filter(p => p && Number.isFinite(p.lng) && Number.isFinite(p.lat));
+    drawRouteArrows();
 });
 
 map.on("load", async () => {
@@ -193,6 +305,7 @@ map.on("load", async () => {
 </script>
 </body>
 </html>
+
 
 
 
