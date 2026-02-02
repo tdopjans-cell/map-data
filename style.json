@@ -217,7 +217,7 @@
       "id": "route-line",
       "type": "line",
       "source": "route",
-      "layout": { "visibility": "visible" },
+      "layout": { "visibility": "none" },
       "paint": { "line-color": "#111111", "line-width": 2, "line-opacity": 1 }
     },
     {
@@ -233,6 +233,7 @@
     }
   ]
 }
+
 
 
 
