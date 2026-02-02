@@ -227,12 +227,13 @@
       "layout": {
         "visibility": "visible",
         "icon-image": ["match", ["get", "role"], "start", "flag-start", "stop", "flag-stop", "end", "flag-end", "flag-stop"],
-        "icon-size": 0,2,
+        "icon-size": 0.2,
         "icon-allow-overlap": true},
       "paint": { "icon-opacity": 0.95 }
     }
   ]
 }
+
 
 
 
