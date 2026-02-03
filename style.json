@@ -37,7 +37,7 @@
   "id": "bg",
   "type": "background",
   "paint": {
-    "background-color": "#f6f4ef"
+    "background-color": "#f6f1e8"
   }
 },
     {
@@ -46,14 +46,9 @@
       "source": "eu_countries",
       "layout": { "visibility": "visible" },
       "paint": {
-  "fill-color": [
-    "case",
-    ["boolean", ["feature-state", "hover"], false],
-    "#e9e3d6",
-    "#f2ede2"
-  ],
-  "fill-opacity": 1
-}
+        "fill-color": "#efe7d6",
+        "fill-opacity": 1
+      }
     },
     {
       "id": "eu-countries-line",
@@ -61,10 +56,9 @@
       "source": "eu_countries",
       "layout": { "visibility": "visible" },
       "paint": {
-  "line-color": "#2b2b2b",
-  "line-width": 1,
-  "line-opacity": 0.7
-}
+        "line-color": "rgba(0,0,0,0.35)",
+        "line-width": 1
+      }
     },
     {
       "id": "eu-country-labels",
@@ -233,6 +227,7 @@
     }
   ]
 }
+
 
 
 
