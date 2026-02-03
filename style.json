@@ -6,7 +6,7 @@
     "ne2": {
       "type": "raster",
       "tiles": [
-        "/.natural_earth_2_shaded_relief.raster.mbtiles"
+        "https://naturalearthtiles.lukasmartinelli.ch/tiles/natural_earth_2_shaded_relief.raster/{z}/{x}/{y}.png"
       ],
       "tileSize": 256,
       "attribution": "Natural Earth"
@@ -248,6 +248,7 @@
     }
   ]
 }
+
 
 
 
