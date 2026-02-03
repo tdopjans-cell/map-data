@@ -10,7 +10,7 @@
       ],
       "tileSize": 256,
       "attribution": "Natural Earth"
-    }
+    },
     "eu_countries": {
       "type": "geojson",
       "data": "./europe.json"
@@ -249,6 +249,7 @@
     }
   ]
 }
+
 
 
 
