@@ -57,8 +57,8 @@
     "maxzoom": 6,
     "paint": {
       "raster-opacity": 1,
-      "raster-saturation": 0.5,
-      "raster-brightness-min": 0.9,
+      "raster-saturation": 1,
+      "raster-brightness-min": 0.75,
       "raster-brightness-max": 1
     }
   },
@@ -69,7 +69,7 @@
       "layout": { "visibility": "visible" },
       "paint": {
         "fill-color": "#efe7d6",
-        "fill-opacity": 0
+        "fill-opacity": 0.05
       }
     },
     {
@@ -112,7 +112,7 @@
     "#e9e3d6",
     "#f2ede2"
   ],
-  "fill-opacity": 0
+  "fill-opacity": 0.05
 }
     },
     {
@@ -249,6 +249,7 @@
     }
   ]
 }
+
 
 
 
