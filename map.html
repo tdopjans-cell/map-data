@@ -189,8 +189,8 @@
       const startFwd = 28;
 
       // Cartoon wobble: leichte seitliche Verschiebung + Bogen
-      const wobbleSide = wobble * Math.min(18, dist * 0.08);
-      const wobbleBend = wobble * Math.min(26, dist * 0.10);
+      const wobbleSide = wobble * Math.min(10, dist * 0.03);
+      const wobbleBend = wobble * Math.min(14, dist * 0.035);
 
       const sx = ax + ux * startFwd + px * wobbleSide;
       const sy = ay + uy * startFwd + py * wobbleSide;
@@ -206,9 +206,9 @@
       const p2x = -u2y, p2y = u2x;
 
       // Größen abhängig von Distanz (wenige, größere Pfeile)
-      const shaftW = Math.max(10, Math.min(18, nd * 0.06));
-      const headL  = Math.max(22, Math.min(52, nd * 0.25));
-      const headW  = shaftW * 2.8;
+      const shaftW = Math.max(10, Math.min(14, nd * 0.028));
+      const headL  = Math.max(20, Math.min(38, nd * 0.11));
+      const headW  = shaftW * 2.4;
 
       // Kontrollpunkt für Bogen
       const mx = (sx + ex) * 0.5 + p2x * wobbleBend;
@@ -238,7 +238,7 @@
 
       ctx.fillStyle = fillColor;
       ctx.strokeStyle = "rgba(10,30,30,0.92)";
-      ctx.lineWidth = 2.4;
+      ctx.lineWidth = 2.0;
 
       ctx.beginPath();
 
@@ -386,6 +386,7 @@
   </script>
 </body>
 </html>
+
 
 
 
