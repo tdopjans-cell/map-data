@@ -57,8 +57,9 @@
     "maxzoom": 6,
     "paint": {
       "raster-opacity": 1,
-      "raster-saturation": 0.95,
-      "raster-brightness-min": 0.93,
+      "raster-saturation": 1,
+      "raster-contrast": 1,
+      "raster-brightness-min": 0.70,
       "raster-brightness-max": 1
     }
   },
@@ -249,6 +250,7 @@
     }
   ]
 }
+
 
 
 
