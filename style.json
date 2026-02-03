@@ -3,6 +3,14 @@
   "name": "Way2goX Minimal Map",
   "glyphs": "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
   "sources": {
+    "ne2": {
+      "type": "raster",
+      "tiles": [
+        "https://github.com/lukasmartinelli/naturalearthtiles/releases/download/v1.0/natural_earth_2_shaded_relief.raster.mbtiles"
+      ],
+      "tileSize": 256,
+      "attribution": "Natural Earth"
+    }
     "eu_countries": {
       "type": "geojson",
       "data": "./europe.json"
@@ -38,8 +46,22 @@
   "type": "background",
   "paint": {
     "background-color": "#f6f1e8"
-  }
+  }   
 },
+      {
+    "id": "ne2-raster",
+    "type": "raster",
+    "source": "ne2",
+    "minzoom": 0,
+    "maxzoom": 8,
+    "paint": {
+      "raster-opacity": 1,
+      "raster-saturation": 0.85,
+      "raster-contrast": 1.05,
+      "raster-brightness-min": 0.95,
+      "raster-brightness-max": 1.05
+    }
+  },
     {
       "id": "eu-countries-fill",
       "type": "fill",
@@ -47,7 +69,7 @@
       "layout": { "visibility": "visible" },
       "paint": {
         "fill-color": "#efe7d6",
-        "fill-opacity": 1
+        "fill-opacity": 0.1
       }
     },
     {
@@ -90,7 +112,7 @@
     "#e9e3d6",
     "#f2ede2"
   ],
-  "fill-opacity": 1
+  "fill-opacity": 0.1
 }
     },
     {
@@ -227,6 +249,7 @@
     }
   ]
 }
+
 
 
 
