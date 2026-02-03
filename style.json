@@ -6,9 +6,10 @@
     "ne2": {
       "type": "raster",
       "tiles": [
-        "https://naturalearthtiles.lukasmartinelli.ch/tiles/natural_earth_2_shaded_relief.raster/{z}/{x}/{y}.png"
+        "http://naturalearthtiles.lukasmartinelli.ch/tiles/natural_earth_2_shaded_relief.raster/{z}/{x}/{y}.png"
       ],
       "tileSize": 256,
+      "maxzoom": 6,
       "attribution": "Natural Earth"
     },
     "eu_countries": {
@@ -49,11 +50,11 @@
   }   
 },
       {
-    "id": "ne2-raster",
+    "id": "ne2",
     "type": "raster",
     "source": "ne2",
     "minzoom": 0,
-    "maxzoom": 8,
+    "maxzoom": 6,
     "paint": {
       "raster-opacity": 1,
       "raster-saturation": 0.82,
@@ -248,6 +249,7 @@
     }
   ]
 }
+
 
 
 
