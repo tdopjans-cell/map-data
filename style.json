@@ -55,11 +55,10 @@
     "source": "ne2",
     "minzoom": 0,
     "maxzoom": 6,
-    "layout": { "visibility": "visible" },
     "paint": {
       "raster-opacity": 1,
-      "raster-saturation": 1,
-      "raster-brightness-min": 0.70,
+      "raster-saturation": 0.5,
+      "raster-brightness-min": 0.9,
       "raster-brightness-max": 1
     }
   },
@@ -250,6 +249,7 @@
     }
   ]
 }
+
 
 
 
