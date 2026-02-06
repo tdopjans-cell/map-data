@@ -65,7 +65,7 @@
       "type": "fill",
       "source": "eu_countries",
       "layout": { "visibility": "visible" },
-      "paint": { "fill-color": "#ffffff", "fill-opacity": 0.02 }
+      "paint": { "fill-color": "#ffffff", "fill-opacity": 0 }
     },
     {
       "id": "eu-countries-line",
@@ -105,7 +105,7 @@
           "#ffffff",
           "#ffffff"
         ],
-        "fill-opacity": 0.02
+        "fill-opacity": 0
       }
     },
     {
@@ -166,7 +166,7 @@
       "type": "fill",
       "source": "selected",
       "layout": { "visibility": "visible" },
-      "paint": { "fill-color": "#ffffff", "fill-opacity": 0.03 }
+      "paint": { "fill-color": "#ffffff", "fill-opacity": 0 }
     },
 
     {
@@ -242,6 +242,7 @@
     }
   ]
 }
+
 
 
 
