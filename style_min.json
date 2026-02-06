@@ -1,0 +1,30 @@
+{
+  "version": 8,
+  "name": "NE2 Minimal",
+  "glyphs": "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+  "sources": {
+    "ne2": {
+      "type": "raster",
+      "tiles": ["./tiles/ne2png/{z}/{x}/{y}.png?v=1"],
+      "tileSize": 256,
+      "maxzoom": 5,
+      "scheme": "xyz"
+    }
+  },
+  "layers": [
+    {
+      "id": "bg",
+      "type": "background",
+      "paint": { "background-color": "#ffffff" }
+    },
+    {
+      "id": "ne2",
+      "type": "raster",
+      "source": "ne2",
+      "paint": {
+        "raster-opacity": 1,
+        "raster-resampling": "linear"
+      }
+    }
+  ]
+}
