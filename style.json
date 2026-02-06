@@ -5,7 +5,7 @@
   "sources": {
     "ne2": {
       "type": "raster",
-      "tiles": ["./tiles/ne2/{z}/{x}/{y}.jpg"],
+      "tiles": ["./tiles/ne2png/{z}/{x}/{y}.png"],
       "tileSize": 256,
       "maxzoom": 5,
       "attribution": "Natural Earth"
@@ -242,6 +242,7 @@
     }
   ]
 }
+
 
 
 
