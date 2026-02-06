@@ -3,27 +3,13 @@
   "name": "Way2goX Minimal Map",
   "glyphs": "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
   "sources": {
-    "ne2": {
+      "ne2": {
       "type": "raster",
-      "tiles": [
-        "./tiles/ne2/{z}/{x}/{y}.jpg"
-      ],
-            "paper": {
-        "type": "geojson",
-        "data": {
-          "type": "FeatureCollection",
-          "features": [{
-            "type": "Feature",
-            "geometry": {
-              "type": "Polygon",
-              "coordinates": [[
-                [-180,-85],[180,-85],[180,85],[-180,85],[-180,-85]
-              ]]
-            },
-            "properties": {}
-          }]
-        }
-      },
+      "tiles": ["./tiles/ne2/{z}/{x}/{y}.jpg"],
+      "tileSize": 256,
+      "maxzoom": 5,
+      "attribution": "Natural Earth"
+    },
       "tileSize": 256,
       "maxzoom": 6,
       "attribution": "Natural Earth"
@@ -66,27 +52,25 @@
   }   
 },
       {
-    "id": "ne2",
-    "type": "raster",
-    "source": "ne2",
-    "minzoom": 0,
-    "maxzoom": 6,
-    "paint": {
-      "raster-opacity": 1,
-      "raster-saturation": 0.85,
-      "raster-contrast": 0.9,
-      "raster-brightness-min": 0.92,
-      "raster-brightness-max": 1,
-      "raster-resampling": "linear"
-    }
-  },
+      "id": "base-ne2",
+      "type": "raster",
+      "source": "ne2",
+      "paint": {
+        "raster-opacity": 1,
+        "raster-saturation": 1,
+        "raster-contrast": 0.9,
+        "raster-brightness-min": 0.9,
+        "raster-brightness-max": 1,
+        "raster-resampling": "linear"
+      }
+},
       {
     "id": "paper-tint",
     "type": "fill",
     "source": "paper",
     "paint": {
       "fill-color": "#f3e7cf",
-      "fill-opacity": 0.18
+      "fill-opacity": 0.06
     }
   },
     {
@@ -96,7 +80,7 @@
       "layout": { "visibility": "visible" },
       "paint": {
         "fill-color": "#efe7d6",
-        "fill-opacity": 0.05
+        "fill-opacity": 0.06
       }
     },
     {
@@ -138,9 +122,9 @@
     ["boolean", ["feature-state", "hover"], false],
     "#e9e3d6",
     "#f2ede2"
-  ],
-  "fill-opacity": 0.05
-}
+      ],
+    "fill-opacity": 0.06
+      }
     },
     {
       "id": "de-states-line",
@@ -276,6 +260,7 @@
     }
   ]
 }
+
 
 
 
