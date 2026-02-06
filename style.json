@@ -1,15 +1,17 @@
 {
   "version": 8,
-  "name": "Way2goX Minimal Map",
+  "name": "Way2goX NE2 + Europe + Germany",
   "glyphs": "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
   "sources": {
     "ne2": {
       "type": "raster",
-      "tiles": ["./tiles/ne2png/{z}/{x}/{y}.png"],
+      "tiles": ["./tiles/ne2png/{z}/{x}/{y}.png?v=1"],
       "tileSize": 256,
       "maxzoom": 5,
-      "attribution": "Natural Earth"
+      "scheme": "tms",
+      "attribution": "Natural Earth II"
     },
+
     "eu_countries": {
       "type": "geojson",
       "data": "./europe.json"
@@ -22,40 +24,41 @@
       "type": "geojson",
       "data": "./germany_inner_points.json"
     },
+
     "de_places": {
       "type": "geojson",
       "data": { "type": "FeatureCollection", "features": [] }
     },
-    "route": {
-      "type": "geojson",
-      "data": { "type": "FeatureCollection", "features": [] }
-    },
+
     "flags": {
       "type": "geojson",
       "data": { "type": "FeatureCollection", "features": [] }
     },
+
     "selected": {
+      "type": "geojson",
+      "data": { "type": "FeatureCollection", "features": [] }
+    },
+
+    "route": {
       "type": "geojson",
       "data": { "type": "FeatureCollection", "features": [] }
     }
   },
+
   "layers": [
     {
       "id": "bg",
       "type": "background",
-      "paint": { "background-color": "#f6f1e8" }
+      "paint": { "background-color": "#ffffff" }
     },
 
     {
-      "id": "base-ne2",
+      "id": "ne2",
       "type": "raster",
       "source": "ne2",
       "paint": {
         "raster-opacity": 1,
-        "raster-saturation": 1,
-        "raster-contrast": 0.9,
-        "raster-brightness-min": 0.92,
-        "raster-brightness-max": 1,
         "raster-resampling": "linear"
       }
     },
@@ -65,14 +68,20 @@
       "type": "fill",
       "source": "eu_countries",
       "layout": { "visibility": "visible" },
-      "paint": { "fill-color": "#ffffff", "fill-opacity": 0 }
+      "paint": {
+        "fill-color": "#ffffff",
+        "fill-opacity": 0.05
+      }
     },
     {
       "id": "eu-countries-line",
       "type": "line",
       "source": "eu_countries",
       "layout": { "visibility": "visible" },
-      "paint": { "line-color": "rgba(0,0,0,0.45)", "line-width": 1 }
+      "paint": {
+        "line-color": "rgba(20,20,20,0.45)",
+        "line-width": 1
+      }
     },
     {
       "id": "eu-country-labels",
@@ -87,7 +96,7 @@
         "text-allow-overlap": false
       },
       "paint": {
-        "text-color": "#111111",
+        "text-color": "#1b1b1b",
         "text-halo-color": "rgba(255,255,255,0.9)",
         "text-halo-width": 1
       }
@@ -99,13 +108,8 @@
       "source": "de_states",
       "layout": { "visibility": "none" },
       "paint": {
-        "fill-color": [
-          "case",
-          ["boolean", ["feature-state", "hover"], false],
-          "#ffffff",
-          "#ffffff"
-        ],
-        "fill-opacity": 0
+        "fill-color": "#ffffff",
+        "fill-opacity": 0.05
       }
     },
     {
@@ -113,7 +117,10 @@
       "type": "line",
       "source": "de_states",
       "layout": { "visibility": "none" },
-      "paint": { "line-color": "#2b2b2b", "line-width": 1, "line-opacity": 0.75 }
+      "paint": {
+        "line-color": "rgba(20,20,20,0.6)",
+        "line-width": 1
+      }
     },
     {
       "id": "de-state-labels",
@@ -128,7 +135,7 @@
         "text-allow-overlap": false
       },
       "paint": {
-        "text-color": "#111111",
+        "text-color": "#1b1b1b",
         "text-halo-color": "rgba(255,255,255,0.9)",
         "text-halo-width": 1
       }
@@ -139,7 +146,11 @@
       "type": "circle",
       "source": "de_places",
       "layout": { "visibility": "none" },
-      "paint": { "circle-radius": 4, "circle-color": "#111111", "circle-opacity": 1 }
+      "paint": {
+        "circle-radius": 4,
+        "circle-color": "#111111",
+        "circle-opacity": 0.95
+      }
     },
     {
       "id": "de-place-labels",
@@ -166,66 +177,19 @@
       "type": "fill",
       "source": "selected",
       "layout": { "visibility": "visible" },
-      "paint": { "fill-color": "#ffffff", "fill-opacity": 0 }
+      "paint": { "fill-color": "#ffffff", "fill-opacity": 0.08 }
     },
 
     {
-      "id": "selected-outline-start-wide",
+      "id": "selected-outline",
       "type": "line",
       "source": "selected",
-      "filter": ["==", ["get", "role"], "start"],
       "layout": { "visibility": "visible" },
-      "paint": { "line-color": "#2b2b2b", "line-width": 5, "line-opacity": 0.25 }
-    },
-    {
-      "id": "selected-outline-start",
-      "type": "line",
-      "source": "selected",
-      "filter": ["==", ["get", "role"], "start"],
-      "layout": { "visibility": "visible" },
-      "paint": { "line-color": "#111111", "line-width": 2 }
-    },
-
-    {
-      "id": "selected-outline-stop-wide",
-      "type": "line",
-      "source": "selected",
-      "filter": ["==", ["get", "role"], "stop"],
-      "layout": { "visibility": "visible" },
-      "paint": { "line-color": "#2b2b2b", "line-width": 4, "line-opacity": 0.18 }
-    },
-    {
-      "id": "selected-outline-stop",
-      "type": "line",
-      "source": "selected",
-      "filter": ["==", ["get", "role"], "stop"],
-      "layout": { "visibility": "visible" },
-      "paint": { "line-color": "#111111", "line-width": 2 }
-    },
-
-    {
-      "id": "selected-outline-end-wide",
-      "type": "line",
-      "source": "selected",
-      "filter": ["==", ["get", "role"], "end"],
-      "layout": { "visibility": "visible" },
-      "paint": { "line-color": "#2b2b2b", "line-width": 6, "line-opacity": 0.28 }
-    },
-    {
-      "id": "selected-outline-end",
-      "type": "line",
-      "source": "selected",
-      "filter": ["==", ["get", "role"], "end"],
-      "layout": { "visibility": "visible" },
-      "paint": { "line-color": "#111111", "line-width": 2 }
-    },
-
-    {
-      "id": "route-line",
-      "type": "line",
-      "source": "route",
-      "layout": { "visibility": "none" },
-      "paint": { "line-color": "#111111", "line-width": 2, "line-opacity": 1 }
+      "paint": {
+        "line-color": "#111111",
+        "line-width": 2,
+        "line-opacity": 0.95
+      }
     },
 
     {
@@ -235,13 +199,15 @@
       "layout": {
         "visibility": "visible",
         "icon-image": ["match", ["get", "role"], "start", "flag-start", "stop", "flag-stop", "end", "flag-end", "flag-stop"],
-        "icon-size": 0.2,
-        "icon-allow-overlap": true
+        "icon-size": 0.18,
+        "icon-allow-overlap": true,
+        "icon-ignore-placement": true
       },
       "paint": { "icon-opacity": 0.95 }
     }
   ]
 }
+
 
 
 
