@@ -8,6 +8,22 @@
       "tiles": [
         "./tiles/ne2/{z}/{x}/{y}.jpg"
       ],
+            "paper": {
+        "type": "geojson",
+        "data": {
+          "type": "FeatureCollection",
+          "features": [{
+            "type": "Feature",
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [[
+                [-180,-85],[180,-85],[180,85],[-180,85],[-180,-85]
+              ]]
+            },
+            "properties": {}
+          }]
+        }
+      },
       "tileSize": 256,
       "maxzoom": 6,
       "attribution": "Natural Earth"
@@ -57,9 +73,20 @@
     "maxzoom": 6,
     "paint": {
       "raster-opacity": 1,
-      "raster-saturation": 1,
-      "raster-brightness-min": 0.75,
-      "raster-brightness-max": 1
+      "raster-saturation": 0.85,
+      "raster-contrast": 0.9,
+      "raster-brightness-min": 0.92,
+      "raster-brightness-max": 1,
+      "raster-resampling": "linear"
+    }
+  },
+      {
+    "id": "paper-tint",
+    "type": "fill",
+    "source": "paper",
+    "paint": {
+      "fill-color": "#f3e7cf",
+      "fill-opacity": 0.18
     }
   },
     {
@@ -249,6 +276,7 @@
     }
   ]
 }
+
 
 
 
