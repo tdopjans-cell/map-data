@@ -7,20 +7,10 @@
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 
   <style>
-    html, body { height: 100%; margin: 0; }
-    #wrap { position: relative; width: 100%; height: 100vh; overflow: hidden; background: #f6f4ef; }
-    #map { position: absolute; inset: 0; }
-    #routeCanvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
-
-
-    /* Debug overlay (kannst du später löschen) */
-    #dbg {
-      position: absolute; left: 10px; top: 10px; z-index: 9999;
-      padding: 6px 8px; border-radius: 8px;
-      background: rgba(0,0,0,0.55); color: white;
-      font: 12px/1.2 monospace;
-      pointer-events: none;
-    }
+    html, body { margin:0; padding:0; height:100%; }
+    #wrap { position:relative; width:100%; height:100vh; overflow:hidden; }
+    #map { position:absolute; inset:0; }
+    #routeCanvas { position:absolute; inset:0; pointer-events:none; z-index:50; }
   </style>
 </head>
 
@@ -28,30 +18,15 @@
   <div id="wrap">
     <div id="map"></div>
     <canvas id="routeCanvas"></canvas>
-    <div id="dbg">loading…</div>
   </div>
 
   <script>
-    const STYLE_URL = "./style.json";
+    const STYLE_URL = "./style.json?v=1";
 
     let currentLevel = "europe";
-    let currentLang = "de";
-
-    // from Bubble
     let selected = { start: null, stops: [], end: null };
+    let lastRouteStops = [];
 
-    // route for canvas arrows
-    let lastRouteStops = []; // [{lng,lat}, ...]
-
-    // wobble animation
-    let wobbleStart = 0;
-    const wobbleDuration = 650; // ms
-    let wobbleRAF = null;
-
-    const dbg = document.getElementById("dbg");
-    function dbgSet(txt) { dbg.textContent = txt; }
-
-    // ---- Map init ----
     const map = new maplibregl.Map({
       container: "map",
       style: STYLE_URL,
@@ -60,7 +35,7 @@
       attributionControl: false
     });
 
-    // ---- Canvas init ----
+    // ===== Canvas setup =====
     const canvas = document.getElementById("routeCanvas");
     const ctx = canvas.getContext("2d");
 
@@ -69,34 +44,99 @@
       const rect = canvas.getBoundingClientRect();
       canvas.width = Math.round(rect.width * dpr);
       canvas.height = Math.round(rect.height * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in CSS pixels
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
     function clearCanvas() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const rect = canvas.getBoundingClientRect();
+      ctx.clearRect(0, 0, rect.width, rect.height);
     }
 
-    window.addEventListener("resize", () => {
-      resizeCanvas();
-      drawRouteArrows(performance.now());
-    });
+    window.addEventListener("resize", () => { resizeCanvas(); drawRouteArrows(); });
 
-    map.on("resize", () => {
-      resizeCanvas();
-      drawRouteArrows(performance.now());
-    });
+    // ===== Playful arrow =====
+    function drawPlayfulArrow(ax, ay, bx, by, fillColor) {
+      const dx = bx - ax, dy = by - ay;
+      const dist = Math.hypot(dx, dy);
+      if (dist < 8) return;
 
-    resizeCanvas();
+      const shaftW = Math.max(6, Math.min(14, dist * 0.05));
+      const headL  = Math.max(18, Math.min(40, dist * 0.18));
+      const headW  = shaftW * 2.4;
 
-    // ---- Helpers ----
+      const ux = dx / dist, uy = dy / dist;
+      const px = -uy, py = ux;
+
+      const endBack = 22;
+      const startFwd = 22;
+
+      const ex = bx - ux * endBack;
+      const ey = by - uy * endBack;
+      const sx = ax + ux * startFwd;
+      const sy = ay + uy * startFwd;
+
+      const hx = ex - ux * headL;
+      const hy = ey - uy * headL;
+
+      const sL = { x: sx + px * (shaftW/2), y: sy + py * (shaftW/2) };
+      const sR = { x: sx - px * (shaftW/2), y: sy - py * (shaftW/2) };
+      const hL = { x: hx + px * (shaftW/2), y: hy + py * (shaftW/2) };
+      const hR = { x: hx - px * (shaftW/2), y: hy - py * (shaftW/2) };
+
+      const kL = { x: hx + px * (headW/2), y: hy + py * (headW/2) };
+      const kR = { x: hx - px * (headW/2), y: hy - py * (headW/2) };
+
+      // Shadow + outline
+      ctx.save();
+      ctx.shadowColor = "rgba(0,0,0,0.18)";
+      ctx.shadowBlur = 6;
+      ctx.shadowOffsetX = 1;
+      ctx.shadowOffsetY = 2;
+
+      ctx.fillStyle = fillColor || "#39c35a";
+      ctx.strokeStyle = "#0b2220";
+      ctx.lineWidth = 2;
+
+      ctx.beginPath();
+      ctx.moveTo(sL.x, sL.y);
+      ctx.lineTo(hL.x, hL.y);
+      ctx.lineTo(kL.x, kL.y);
+      ctx.lineTo(ex, ey);
+      ctx.lineTo(kR.x, kR.y);
+      ctx.lineTo(hR.x, hR.y);
+      ctx.lineTo(sR.x, sR.y);
+      ctx.closePath();
+
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawRouteArrows() {
+      clearCanvas();
+      if (!Array.isArray(lastRouteStops) || lastRouteStops.length < 2) return;
+
+      for (let i = 0; i < lastRouteStops.length - 1; i++) {
+        const a = lastRouteStops[i];
+        const b = lastRouteStops[i + 1];
+        if (!a || !b) continue;
+
+        const pA = map.project([a.lng, a.lat]);
+        const pB = map.project([b.lng, b.lat]);
+
+        const color = (i === 0) ? "#39c35a" : "#f2c94c";
+        drawPlayfulArrow(pA.x, pA.y, pB.x, pB.y, color);
+      }
+    }
+
+    map.on("move", drawRouteArrows);
+    map.on("zoom", drawRouteArrows);
+
+    // ===== Helpers =====
     function safeSetVisibility(id, visible) {
       try {
-        if (map.getLayer(id)) {
-          map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
-        }
-      } catch (e) {
-        console.warn("visibility fail", id, e);
-      }
+        if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
+      } catch (e) {}
     }
 
     function setLevel(level) {
@@ -119,11 +159,6 @@
       if (level === "germany") map.flyTo({ center: [10.5, 51.2], zoom: 5.8, duration: 900 });
     }
 
-    function setLanguage(lang) {
-      currentLang = lang;
-      // später: Labels dynamisch umschalten (NAME_DE/NAME_EN etc.)
-    }
-
     async function addIconSafe(name, url) {
       try {
         const img = new Image();
@@ -132,7 +167,7 @@
         await img.decode();
         if (!map.hasImage(name)) map.addImage(name, img);
       } catch (e) {
-        console.warn("Icon konnte nicht geladen werden:", name, url);
+        console.warn("Icon load fail", name, url, e);
       }
     }
 
@@ -166,155 +201,17 @@
 
       const fc = { type: "FeatureCollection", features: feats };
       const src = map.getSource("flags");
-      if (src && src.setData) src.setData(fc);
+      if (src) src.setData(fc);
     }
 
-    // ---- Cartoon Arrow drawing + Wobble ----
-    function easeOutBack(t) {
-      const c1 = 1.70158;
-      const c3 = c1 + 1;
-      return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+    function updateSelectedGeojson() {
+      // Optional: Hier könntest du später das echte Polygon des ausgewählten Features reinlegen.
+      // MVP: lassen wir erstmal leer -> nur Flags + Pfeile.
+      const src = map.getSource("selected");
+      if (src) src.setData({ type: "FeatureCollection", features: [] });
     }
 
-    function drawPlayfulArrow(ax, ay, bx, by, fillColor = "#39c35a", wobble = 0) {
-      const dx = bx - ax, dy = by - ay;
-      const dist = Math.hypot(dx, dy);
-      if (dist < 20) return;
-
-      const ux = dx / dist, uy = dy / dist;
-      const px = -uy, py = ux;
-
-      // Abstand zu Flaggen (damit Pfeil nicht "in" die Flagge sticht)
-      const endBack = 28;
-      const startFwd = 28;
-
-      // Cartoon wobble: leichte seitliche Verschiebung + Bogen
-      const wobbleSide = wobble * Math.min(10, dist * 0.03);
-      const wobbleBend = wobble * Math.min(14, dist * 0.035);
-
-      const sx = ax + ux * startFwd + px * wobbleSide;
-      const sy = ay + uy * startFwd + py * wobbleSide;
-
-      const ex = bx - ux * endBack + px * wobbleSide;
-      const ey = by - uy * endBack + py * wobbleSide;
-
-      const ndx = ex - sx, ndy = ey - sy;
-      const nd = Math.hypot(ndx, ndy);
-      if (nd < 20) return;
-
-      const u2x = ndx / nd, u2y = ndy / nd;
-      const p2x = -u2y, p2y = u2x;
-
-      // Größen abhängig von Distanz (wenige, größere Pfeile)
-      const shaftW = Math.max(10, Math.min(14, nd * 0.028));
-      const headL  = Math.max(20, Math.min(38, nd * 0.11));
-      const headW  = shaftW * 2.4;
-
-      // Kontrollpunkt für Bogen
-      const mx = (sx + ex) * 0.5 + p2x * wobbleBend;
-      const my = (sy + ey) * 0.5 + p2y * wobbleBend;
-
-      // Kopf-Basis
-      const hx = ex - u2x * headL;
-      const hy = ey - u2y * headL;
-
-      // Umriss-Punkte
-      const sL = { x: sx + p2x * (shaftW/2), y: sy + p2y * (shaftW/2) };
-      const sR = { x: sx - p2x * (shaftW/2), y: sy - p2y * (shaftW/2) };
-
-      const hL = { x: hx + p2x * (shaftW/2), y: hy + p2y * (shaftW/2) };
-      const hR = { x: hx - p2x * (shaftW/2), y: hy - p2y * (shaftW/2) };
-
-      const kL = { x: hx + p2x * (headW/2), y: hy + p2y * (headW/2) };
-      const kR = { x: hx - p2x * (headW/2), y: hy - p2y * (headW/2) };
-
-      ctx.save();
-
-      // Shadow für "Sticker" Look
-      ctx.shadowColor = "rgba(0,0,0,0.18)";
-      ctx.shadowBlur = 8;
-      ctx.shadowOffsetX = 1;
-      ctx.shadowOffsetY = 2;
-
-      ctx.fillStyle = fillColor;
-      ctx.strokeStyle = "rgba(10,30,30,0.92)";
-      ctx.lineWidth = 2.0;
-
-      ctx.beginPath();
-
-      // linke Seite (runde, cartoonige Kurven)
-      ctx.moveTo(sL.x, sL.y);
-      ctx.quadraticCurveTo(mx + p2x*(shaftW*0.35), my + p2y*(shaftW*0.35), hL.x, hL.y);
-
-      // Kopf links -> Spitze
-      ctx.quadraticCurveTo(hx + p2x*(headW*0.35), hy + p2y*(headW*0.35), kL.x, kL.y);
-      ctx.quadraticCurveTo(ex, ey, ex, ey);
-
-      // Kopf rechts
-      ctx.quadraticCurveTo(hx - p2x*(headW*0.35), hy - p2y*(headW*0.35), kR.x, kR.y);
-
-      // rechte Seite zurück
-      ctx.quadraticCurveTo(mx - p2x*(shaftW*0.35), my - p2y*(shaftW*0.35), hR.x, hR.y);
-      ctx.quadraticCurveTo(mx - p2x*(shaftW*0.55), my - p2y*(shaftW*0.55), sR.x, sR.y);
-
-      // runde Startkappe
-      ctx.quadraticCurveTo(sx, sy, sL.x, sL.y);
-
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.restore();
-    }
-
-    function drawRouteArrows(now = 0) {
-      clearCanvas();
-      if (!Array.isArray(lastRouteStops) || lastRouteStops.length < 2) return;
-
-      // Wobble Faktor (0..~1..0) mit Overshoot
-      let wobble = 0;
-      if (wobbleStart && now) {
-        const t = Math.min(1, (now - wobbleStart) / wobbleDuration);
-        const a = easeOutBack(t);
-        wobble = (1 - t) * 0.95 * a;
-      }
-
-      for (let i = 0; i < lastRouteStops.length - 1; i++) {
-        const a = lastRouteStops[i];
-        const b = lastRouteStops[i + 1];
-        if (!a || !b) continue;
-
-        const pA = map.project([a.lng, a.lat]);
-        const pB = map.project([b.lng, b.lat]);
-
-        // Segmentfarben (du kannst das später ändern)
-        const color = (i === 0) ? "#39c35a" : "#f2c94c";
-        drawPlayfulArrow(pA.x, pA.y, pB.x, pB.y, color, wobble);
-      }
-    }
-
-    function startWobble() {
-      wobbleStart = performance.now();
-      if (wobbleRAF) cancelAnimationFrame(wobbleRAF);
-
-      const tick = (now) => {
-        const t = (now - wobbleStart) / wobbleDuration;
-        if (t >= 1) {
-          wobbleRAF = null;
-          drawRouteArrows(performance.now());
-          return;
-        }
-        drawRouteArrows(now);
-        wobbleRAF = requestAnimationFrame(tick);
-      };
-
-      wobbleRAF = requestAnimationFrame(tick);
-    }
-
-    map.on("move", () => drawRouteArrows(performance.now()));
-    map.on("zoom", () => drawRouteArrows(performance.now()));
-
-    // ---- Map -> Bubble (select) ----
+    // ===== Click -> Bubble select =====
     map.on("click", (e) => {
       const layers = currentLevel === "germany"
         ? ["de-states-fill", "de-places"]
@@ -344,44 +241,36 @@
       }, "*");
     });
 
-    // ---- Bubble -> Map ----
+    // ===== Bubble -> Map messages =====
     window.addEventListener("message", (ev) => {
       const msg = ev.data;
       if (!msg || typeof msg !== "object") return;
 
       if (msg.type === "setLevel") setLevel(msg.level);
-      if (msg.type === "setLanguage") setLanguage(msg.lang);
 
       if (msg.type === "setSelected") {
         selected = msg.selected || { start: null, stops: [], end: null };
         updateFlagsGeojson();
-        dbgSet("setSelected " + new Date().toLocaleTimeString());
+        updateSelectedGeojson();
       }
 
       if (msg.type === "setRoute") {
         lastRouteStops = (msg.stops || [])
           .filter(p => p && Number.isFinite(p.lng) && Number.isFinite(p.lat));
-
-        dbgSet("setRoute points=" + lastRouteStops.length + " " + new Date().toLocaleTimeString());
-
-        // Wobble starten nur, wenn >= 2 Punkte
-        if (lastRouteStops.length >= 2) startWobble();
-        else drawRouteArrows(performance.now());
+        drawRouteArrows();
       }
     });
 
     map.on("load", async () => {
-      // Flag icons (deine Dateinamen!)
+      resizeCanvas();
+
       await addIconSafe("flag-start", "./flag_start.png");
       await addIconSafe("flag-stop", "./flag_stop.png");
       await addIconSafe("flag-end", "./flag_end.png");
 
       setLevel(currentLevel);
       updateFlagsGeojson();
-      resizeCanvas();
-      drawRouteArrows(performance.now());
-
-      dbgSet("ready");
+      drawRouteArrows();
     });
   </script>
 </body>
