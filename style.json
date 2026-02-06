@@ -49,10 +49,10 @@
   "type": "background",
   "paint": {
     "background-color": "#f6f1e8"
-  }   
-},
+      }   
+    },
       {
-      "id": "base-ne2",
+      "id": "ne2",
       "type": "raster",
       "source": "ne2",
       "paint": {
@@ -63,16 +63,7 @@
         "raster-brightness-max": 1,
         "raster-resampling": "linear"
       }
-},
-      {
-    "id": "paper-tint",
-    "type": "fill",
-    "source": "paper",
-    "paint": {
-      "fill-color": "#f3e7cf",
-      "fill-opacity": 0.06
-    }
-  },
+    },
     {
       "id": "eu-countries-fill",
       "type": "fill",
@@ -260,6 +251,7 @@
     }
   ]
 }
+
 
 
 
