@@ -8,7 +8,7 @@
       "tiles": ["./tiles/ne2png/{z}/{x}/{y}.png?v=1"],
       "tileSize": 256,
       "maxzoom": 5,
-      "scheme": "xyz"
+      "scheme": "tms"
     }
   },
   "layers": [
