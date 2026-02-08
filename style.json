@@ -17,11 +17,13 @@
       "data": "./europe.json",
       "promoteId": "ISO_A2"
     },
+
     "de_states": {
       "type": "geojson",
       "data": "./germany.json",
       "promoteId": "ISO_3166_2"
     },
+
     "de_state_points": {
       "type": "geojson",
       "data": "./germany_inner_points.json"
@@ -33,16 +35,6 @@
     },
 
     "flags": {
-      "type": "geojson",
-      "data": { "type": "FeatureCollection", "features": [] }
-    },
-
-    "selected": {
-      "type": "geojson",
-      "data": { "type": "FeatureCollection", "features": [] }
-    },
-
-    "route": {
       "type": "geojson",
       "data": { "type": "FeatureCollection", "features": [] }
     }
@@ -71,7 +63,7 @@
       "source": "eu_countries",
       "layout": { "visibility": "visible" },
       "paint": {
-       "fill-color": [
+        "fill-color": [
           "case",
           ["boolean", ["feature-state", "selected"], false], "#ffffff",
           ["boolean", ["feature-state", "hover"], false], "#ffffff",
@@ -120,18 +112,18 @@
       "source": "de_states",
       "layout": { "visibility": "none" },
       "paint": {
-       "fill-color": [
-        "case",
-        ["boolean", ["feature-state", "selected"], false], "#ffffff",
-        ["boolean", ["feature-state", "hover"], false], "#ffffff",
-        "#efe7d6"
-      ],
-      "fill-opacity": [
-        "case",
-        ["boolean", ["feature-state", "selected"], false], 0.22,
-        ["boolean", ["feature-state", "hover"], false], 0.12,
-        0.06
-      ]
+        "fill-color": [
+          "case",
+          ["boolean", ["feature-state", "selected"], false], "#ffffff",
+          ["boolean", ["feature-state", "hover"], false], "#ffffff",
+          "#efe7d6"
+        ],
+        "fill-opacity": [
+          "case",
+          ["boolean", ["feature-state", "selected"], false], 0.22,
+          ["boolean", ["feature-state", "hover"], false], 0.12,
+          0.06
+        ]
       }
     },
     {
@@ -195,26 +187,6 @@
     },
 
     {
-      "id": "selected-fill",
-      "type": "fill",
-      "source": "selected",
-      "layout": { "visibility": "visible" },
-      "paint": { "fill-color": "#ffffff", "fill-opacity": 0.08 }
-    },
-
-    {
-      "id": "selected-outline",
-      "type": "line",
-      "source": "selected",
-      "layout": { "visibility": "visible" },
-      "paint": {
-        "line-color": "#111111",
-        "line-width": 2,
-        "line-opacity": 0.95
-      }
-    },
-
-    {
       "id": "flags",
       "type": "symbol",
       "source": "flags",
@@ -229,6 +201,7 @@
     }
   ]
 }
+
 
 
 
