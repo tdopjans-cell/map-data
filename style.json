@@ -14,11 +14,13 @@
 
     "eu_countries": {
       "type": "geojson",
-      "data": "./europe.json"
+      "data": "./europe.json",
+      "promoteId": "ISO_A2"
     },
     "de_states": {
       "type": "geojson",
       "data": "./germany.json"
+      "promoteId": "ISO_3166_2"
     },
     "de_state_points": {
       "type": "geojson",
@@ -69,8 +71,18 @@
       "source": "eu_countries",
       "layout": { "visibility": "visible" },
       "paint": {
-        "fill-color": "#ffffff",
-        "fill-opacity": 0.05
+       "fill-color": [
+          "case",
+          ["boolean", ["feature-state", "selected"], false], "#ffffff",
+          ["boolean", ["feature-state", "hover"], false], "#ffffff",
+          "#efe7d6"
+        ],
+        "fill-opacity": [
+          "case",
+          ["boolean", ["feature-state", "selected"], false], 0.22,
+          ["boolean", ["feature-state", "hover"], false], 0.12,
+          0.06
+        ]
       }
     },
     {
@@ -108,8 +120,18 @@
       "source": "de_states",
       "layout": { "visibility": "none" },
       "paint": {
-        "fill-color": "#ffffff",
-        "fill-opacity": 0.05
+       "fill-color": [
+        "case",
+        ["boolean", ["feature-state", "selected"], false], "#ffffff",
+        ["boolean", ["feature-state", "hover"], false], "#ffffff",
+        "#efe7d6"
+      ],
+      "fill-opacity": [
+        "case",
+        ["boolean", ["feature-state", "selected"], false], 0.22,
+        ["boolean", ["feature-state", "hover"], false], 0.12,
+        0.06
+      ]
       }
     },
     {
@@ -207,6 +229,7 @@
     }
   ]
 }
+
 
 
 
