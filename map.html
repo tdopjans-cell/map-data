@@ -7,8 +7,9 @@
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 
   <style>
-    html, body { margin:0; padding:0; height:100%; }
-    #wrap { position:relative; width:100%; height:100vh; overflow:hidden; }
+    html, body { margin:0; padding:0; height:100%; width:100%; }
+    /* In Bubble iFrame ist 100% stabiler als 100vh */
+    #wrap { position:relative; width:100%; height:100%; overflow:hidden; }
     #map { position:absolute; inset:0; }
     #routeCanvas { position:absolute; inset:0; pointer-events:none; z-index:50; }
   </style>
@@ -21,15 +22,18 @@
   </div>
 
   <script>
-    const STYLE_URL = "./style.json";
+    const STYLE_URL = "./style.json?v=1";
 
     let currentLevel = "europe";
     let selected = { start: null, stops: [], end: null };
     let lastRouteStops = [];
 
-    // Hover/Selected state
-    let hoveredId = null;
-    let selectedId = null;
+    // Hover/Selected state (separat pro Level!)
+    let hoveredIdEU = null;
+    let hoveredIdDE = null;
+
+    let selectedIdEU = null;
+    let selectedIdDE = null;
 
     const map = new maplibregl.Map({
       container: "map",
@@ -45,19 +49,23 @@
 
     function resizeCanvas() {
       const dpr = window.devicePixelRatio || 1;
-      const rect = canvas.getBoundingClientRect();
+
+      // ✅ wichtig: Größe vom Map-Container nehmen
+      const rect = map.getContainer().getBoundingClientRect();
+
+      canvas.style.width = rect.width + "px";
+      canvas.style.height = rect.height + "px";
       canvas.width = Math.round(rect.width * dpr);
       canvas.height = Math.round(rect.height * dpr);
+
       // draw in CSS pixels
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
     function clearCanvas() {
-      const rect = canvas.getBoundingClientRect();
-      ctx.clearRect(0, 0, rect.width, rect.height);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 
-    // Redraw helpers
     function redrawAll() {
       resizeCanvas();
       drawRouteArrows();
@@ -70,17 +78,15 @@
     function drawPlayfulArrow(ax, ay, bx, by, fillColor) {
       const dx = bx - ax, dy = by - ay;
       const dist = Math.hypot(dx, dy);
-      if (dist < 8) return;
+      if (dist < 10) return;
 
-      // scale with distance
       const shaftW = Math.max(6, Math.min(14, dist * 0.05));
-      const headL  = Math.max(18, Math.min(42, dist * 0.18));
+      const headL  = Math.max(18, Math.min(44, dist * 0.18));
       const headW  = shaftW * 2.4;
 
       const ux = dx / dist, uy = dy / dist;
       const px = -uy, py = ux;
 
-      // keep arrow away from flags
       const endBack = 22;
       const startFwd = 22;
 
@@ -152,12 +158,6 @@
       } catch (e) {}
     }
 
-    function getActivePolygonLayerIds() {
-      // Only polygon fills for selection/hover
-      if (currentLevel === "germany") return ["de-states-fill"];
-      return ["eu-countries-fill"];
-    }
-
     function setLevel(level) {
       currentLevel = level;
 
@@ -174,40 +174,55 @@
       safeSetVisibility("de-places", showGermany);
       safeSetVisibility("de-place-labels", showGermany);
 
-      // Clear hover when switching level
-      clearHoverState();
+      // Hover reset
+      clearHoverEU();
+      clearHoverDE();
 
-      if (level === "europe") map.flyTo({ center: [12, 52], zoom: 3.5, duration: 900 });
-      if (level === "germany") map.flyTo({ center: [10.5, 51.2], zoom: 5.8, duration: 900 });
-    }
-
-    function clearHoverState() {
-      const layers = getActivePolygonLayerIds();
-      for (const layerId of layers) {
-        const srcId = layerId === "de-states-fill" ? "de_states" : "eu_countries";
-        if (hoveredId !== null && map.getSource(srcId)) {
-          try { map.setFeatureState({ source: srcId, id: hoveredId }, { hover: false }); } catch(e){}
-        }
+      if (level === "europe") {
+        map.flyTo({ center: [12, 52], zoom: 3.5, duration: 900 });
       }
-      hoveredId = null;
+      if (level === "germany") {
+        map.flyTo({ center: [10.5, 51.2], zoom: 5.8, duration: 900 });
+      }
+
+      // ✅ nach FlyTo einmal neu anpassen (Bubble resize timing)
+      setTimeout(() => redrawAll(), 120);
     }
 
-    function setSelectedState(feature) {
-      // We rely on promoteId so feature.id is stable
-      const layers = getActivePolygonLayerIds();
-      for (const layerId of layers) {
-        const srcId = layerId === "de-states-fill" ? "de_states" : "eu_countries";
-        if (!map.getSource(srcId)) continue;
+    // --- Hover handling: getrennt ---
+    function clearHoverEU() {
+      if (hoveredIdEU !== null && map.getSource("eu_countries")) {
+        try { map.setFeatureState({ source: "eu_countries", id: hoveredIdEU }, { hover: false }); } catch(e){}
+      }
+      hoveredIdEU = null;
+    }
+    function clearHoverDE() {
+      if (hoveredIdDE !== null && map.getSource("de_states")) {
+        try { map.setFeatureState({ source: "de_states", id: hoveredIdDE }, { hover: false }); } catch(e){}
+      }
+      hoveredIdDE = null;
+    }
 
-        // clear previous selected
-        if (selectedId !== null) {
-          try { map.setFeatureState({ source: srcId, id: selectedId }, { selected: false }); } catch(e){}
-        }
+    // --- Selected handling: getrennt ---
+    function setSelectedEU(featureId) {
+      if (!map.getSource("eu_countries")) return;
+      if (selectedIdEU !== null) {
+        try { map.setFeatureState({ source: "eu_countries", id: selectedIdEU }, { selected: false }); } catch(e){}
+      }
+      selectedIdEU = featureId;
+      if (selectedIdEU !== null) {
+        try { map.setFeatureState({ source: "eu_countries", id: selectedIdEU }, { selected: true }); } catch(e){}
+      }
+    }
 
-        selectedId = (feature && (feature.id !== undefined && feature.id !== null)) ? feature.id : null;
-        if (selectedId !== null) {
-          try { map.setFeatureState({ source: srcId, id: selectedId }, { selected: true }); } catch(e){}
-        }
+    function setSelectedDE(featureId) {
+      if (!map.getSource("de_states")) return;
+      if (selectedIdDE !== null) {
+        try { map.setFeatureState({ source: "de_states", id: selectedIdDE }, { selected: false }); } catch(e){}
+      }
+      selectedIdDE = featureId;
+      if (selectedIdDE !== null) {
+        try { map.setFeatureState({ source: "de_states", id: selectedIdDE }, { selected: true }); } catch(e){}
       }
     }
 
@@ -256,32 +271,43 @@
       if (src) src.setData(fc);
     }
 
-    // ===== Hover effect (optional but nice) =====
+    // ===== Hover effect =====
     map.on("mousemove", (e) => {
-      const layers = getActivePolygonLayerIds();
-      // If layers not in style yet, skip
-      if (!layers.every(id => map.getLayer(id))) return;
+      const layerId = (currentLevel === "germany") ? "de-states-fill" : "eu-countries-fill";
+      if (!map.getLayer(layerId)) return;
 
-      const feats = map.queryRenderedFeatures(e.point, { layers });
+      const feats = map.queryRenderedFeatures(e.point, { layers: [layerId] });
       if (!feats.length) {
-        clearHoverState();
+        clearHoverEU();
+        clearHoverDE();
         return;
       }
 
       const f = feats[0];
-      const srcId = (currentLevel === "germany") ? "de_states" : "eu_countries";
+      const fid = (f.id !== undefined && f.id !== null) ? f.id : null;
 
-      if (hoveredId !== null && hoveredId !== f.id) {
-        try { map.setFeatureState({ source: srcId, id: hoveredId }, { hover: false }); } catch(e){}
-      }
-      hoveredId = (f.id !== undefined && f.id !== null) ? f.id : null;
-      if (hoveredId !== null) {
-        try { map.setFeatureState({ source: srcId, id: hoveredId }, { hover: true }); } catch(e){}
+      if (currentLevel === "europe") {
+        if (hoveredIdEU !== null && hoveredIdEU !== fid) {
+          try { map.setFeatureState({ source: "eu_countries", id: hoveredIdEU }, { hover: false }); } catch(e){}
+        }
+        hoveredIdEU = fid;
+        if (hoveredIdEU !== null) {
+          try { map.setFeatureState({ source: "eu_countries", id: hoveredIdEU }, { hover: true }); } catch(e){}
+        }
+      } else {
+        if (hoveredIdDE !== null && hoveredIdDE !== fid) {
+          try { map.setFeatureState({ source: "de_states", id: hoveredIdDE }, { hover: false }); } catch(e){}
+        }
+        hoveredIdDE = fid;
+        if (hoveredIdDE !== null) {
+          try { map.setFeatureState({ source: "de_states", id: hoveredIdDE }, { hover: true }); } catch(e){}
+        }
       }
     });
 
     map.on("mouseleave", () => {
-      clearHoverState();
+      clearHoverEU();
+      clearHoverDE();
     });
 
     // ===== Click -> Bubble select + highlight =====
@@ -300,7 +326,10 @@
 
       // highlight polygon if area
       const isArea = (f.geometry && (f.geometry.type === "Polygon" || f.geometry.type === "MultiPolygon"));
-      if (isArea) setSelectedState(f);
+      if (isArea && f.id !== undefined && f.id !== null) {
+        if (currentLevel === "europe") setSelectedEU(f.id);
+        if (currentLevel === "germany") setSelectedDE(f.id);
+      }
 
       const name =
         currentLevel === "germany"
@@ -329,7 +358,12 @@
 
       if (msg.type === "flyTo") {
         if (Number.isFinite(msg.lng) && Number.isFinite(msg.lat)) {
-          map.flyTo({ center: [msg.lng, msg.lat], zoom: msg.zoom || (currentLevel === "germany" ? 6.5 : 4.5), duration: 900 });
+          map.flyTo({
+            center: [msg.lng, msg.lat],
+            zoom: msg.zoom || (currentLevel === "germany" ? 6.5 : 4.5),
+            duration: 900
+          });
+          setTimeout(() => redrawAll(), 120);
         }
       }
 
@@ -341,7 +375,8 @@
       if (msg.type === "setRoute") {
         lastRouteStops = (msg.stops || [])
           .filter(p => p && Number.isFinite(p.lng) && Number.isFinite(p.lat));
-        drawRouteArrows();
+        // ✅ ganz wichtig gegen “oben links”
+        redrawAll();
       }
     });
 
@@ -355,10 +390,15 @@
       setLevel(currentLevel);
       updateFlagsGeojson();
       drawRouteArrows();
+
+      // Bubble/iFrame Layout kann noch nachziehen
+      setTimeout(() => redrawAll(), 250);
     });
   </script>
 </body>
 </html>
+
+
 
 
 
