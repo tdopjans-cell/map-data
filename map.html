@@ -326,6 +326,9 @@
 
       // highlight polygon if area
       const isArea = (f.geometry && (f.geometry.type === "Polygon" || f.geometry.type === "MultiPolygon"));
+      if (currentLevel === "germany") {
+      console.log("DE click:", "feature.id=", f.id, "ISO_3166_2=", (p.ISO_3166_2 || null));
+    }
       if (isArea && f.id !== undefined && f.id !== null) {
         if (currentLevel === "europe") setSelectedEU(f.id);
         if (currentLevel === "germany") setSelectedDE(f.id);
@@ -397,6 +400,7 @@
   </script>
 </body>
 </html>
+
 
 
 
