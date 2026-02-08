@@ -27,6 +27,10 @@
     let selected = { start: null, stops: [], end: null };
     let lastRouteStops = [];
 
+    // Hover/Selected state
+    let hoveredId = null;
+    let selectedId = null;
+
     const map = new maplibregl.Map({
       container: "map",
       style: STYLE_URL,
@@ -44,6 +48,7 @@
       const rect = canvas.getBoundingClientRect();
       canvas.width = Math.round(rect.width * dpr);
       canvas.height = Math.round(rect.height * dpr);
+      // draw in CSS pixels
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
@@ -52,7 +57,14 @@
       ctx.clearRect(0, 0, rect.width, rect.height);
     }
 
-    window.addEventListener("resize", () => { resizeCanvas(); drawRouteArrows(); });
+    // Redraw helpers
+    function redrawAll() {
+      resizeCanvas();
+      drawRouteArrows();
+    }
+
+    window.addEventListener("resize", redrawAll);
+    map.on("resize", redrawAll);
 
     // ===== Playful arrow =====
     function drawPlayfulArrow(ax, ay, bx, by, fillColor) {
@@ -60,13 +72,15 @@
       const dist = Math.hypot(dx, dy);
       if (dist < 8) return;
 
+      // scale with distance
       const shaftW = Math.max(6, Math.min(14, dist * 0.05));
-      const headL  = Math.max(18, Math.min(40, dist * 0.18));
+      const headL  = Math.max(18, Math.min(42, dist * 0.18));
       const headW  = shaftW * 2.4;
 
       const ux = dx / dist, uy = dy / dist;
       const px = -uy, py = ux;
 
+      // keep arrow away from flags
       const endBack = 22;
       const startFwd = 22;
 
@@ -86,7 +100,6 @@
       const kL = { x: hx + px * (headW/2), y: hy + py * (headW/2) };
       const kR = { x: hx - px * (headW/2), y: hy - py * (headW/2) };
 
-      // Shadow + outline
       ctx.save();
       ctx.shadowColor = "rgba(0,0,0,0.18)";
       ctx.shadowBlur = 6;
@@ -139,6 +152,12 @@
       } catch (e) {}
     }
 
+    function getActivePolygonLayerIds() {
+      // Only polygon fills for selection/hover
+      if (currentLevel === "germany") return ["de-states-fill"];
+      return ["eu-countries-fill"];
+    }
+
     function setLevel(level) {
       currentLevel = level;
 
@@ -155,8 +174,41 @@
       safeSetVisibility("de-places", showGermany);
       safeSetVisibility("de-place-labels", showGermany);
 
+      // Clear hover when switching level
+      clearHoverState();
+
       if (level === "europe") map.flyTo({ center: [12, 52], zoom: 3.5, duration: 900 });
       if (level === "germany") map.flyTo({ center: [10.5, 51.2], zoom: 5.8, duration: 900 });
+    }
+
+    function clearHoverState() {
+      const layers = getActivePolygonLayerIds();
+      for (const layerId of layers) {
+        const srcId = layerId === "de-states-fill" ? "de_states" : "eu_countries";
+        if (hoveredId !== null && map.getSource(srcId)) {
+          try { map.setFeatureState({ source: srcId, id: hoveredId }, { hover: false }); } catch(e){}
+        }
+      }
+      hoveredId = null;
+    }
+
+    function setSelectedState(feature) {
+      // We rely on promoteId so feature.id is stable
+      const layers = getActivePolygonLayerIds();
+      for (const layerId of layers) {
+        const srcId = layerId === "de-states-fill" ? "de_states" : "eu_countries";
+        if (!map.getSource(srcId)) continue;
+
+        // clear previous selected
+        if (selectedId !== null) {
+          try { map.setFeatureState({ source: srcId, id: selectedId }, { selected: false }); } catch(e){}
+        }
+
+        selectedId = (feature && (feature.id !== undefined && feature.id !== null)) ? feature.id : null;
+        if (selectedId !== null) {
+          try { map.setFeatureState({ source: srcId, id: selectedId }, { selected: true }); } catch(e){}
+        }
+      }
     }
 
     async function addIconSafe(name, url) {
@@ -204,24 +256,51 @@
       if (src) src.setData(fc);
     }
 
-    function updateSelectedGeojson() {
-      // Optional: Hier könntest du später das echte Polygon des ausgewählten Features reinlegen.
-      // MVP: lassen wir erstmal leer -> nur Flags + Pfeile.
-      const src = map.getSource("selected");
-      if (src) src.setData({ type: "FeatureCollection", features: [] });
-    }
+    // ===== Hover effect (optional but nice) =====
+    map.on("mousemove", (e) => {
+      const layers = getActivePolygonLayerIds();
+      // If layers not in style yet, skip
+      if (!layers.every(id => map.getLayer(id))) return;
 
-    // ===== Click -> Bubble select =====
+      const feats = map.queryRenderedFeatures(e.point, { layers });
+      if (!feats.length) {
+        clearHoverState();
+        return;
+      }
+
+      const f = feats[0];
+      const srcId = (currentLevel === "germany") ? "de_states" : "eu_countries";
+
+      if (hoveredId !== null && hoveredId !== f.id) {
+        try { map.setFeatureState({ source: srcId, id: hoveredId }, { hover: false }); } catch(e){}
+      }
+      hoveredId = (f.id !== undefined && f.id !== null) ? f.id : null;
+      if (hoveredId !== null) {
+        try { map.setFeatureState({ source: srcId, id: hoveredId }, { hover: true }); } catch(e){}
+      }
+    });
+
+    map.on("mouseleave", () => {
+      clearHoverState();
+    });
+
+    // ===== Click -> Bubble select + highlight =====
     map.on("click", (e) => {
       const layers = currentLevel === "germany"
         ? ["de-states-fill", "de-places"]
         : ["eu-countries-fill"];
+
+      if (!layers.every(id => map.getLayer(id))) return;
 
       const feats = map.queryRenderedFeatures(e.point, { layers });
       if (!feats.length) return;
 
       const f = feats[0];
       const p = f.properties || {};
+
+      // highlight polygon if area
+      const isArea = (f.geometry && (f.geometry.type === "Polygon" || f.geometry.type === "MultiPolygon"));
+      if (isArea) setSelectedState(f);
 
       const name =
         currentLevel === "germany"
@@ -248,10 +327,15 @@
 
       if (msg.type === "setLevel") setLevel(msg.level);
 
+      if (msg.type === "flyTo") {
+        if (Number.isFinite(msg.lng) && Number.isFinite(msg.lat)) {
+          map.flyTo({ center: [msg.lng, msg.lat], zoom: msg.zoom || (currentLevel === "germany" ? 6.5 : 4.5), duration: 900 });
+        }
+      }
+
       if (msg.type === "setSelected") {
         selected = msg.selected || { start: null, stops: [], end: null };
         updateFlagsGeojson();
-        updateSelectedGeojson();
       }
 
       if (msg.type === "setRoute") {
@@ -262,7 +346,7 @@
     });
 
     map.on("load", async () => {
-      resizeCanvas();
+      redrawAll();
 
       await addIconSafe("flag-start", "./flag_start.png");
       await addIconSafe("flag-stop", "./flag_stop.png");
@@ -275,6 +359,7 @@
   </script>
 </body>
 </html>
+
 
 
 
