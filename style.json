@@ -19,7 +19,7 @@
     },
     "de_states": {
       "type": "geojson",
-      "data": "./germany.json"
+      "data": "./germany.json",
       "promoteId": "ISO_3166_2"
     },
     "de_state_points": {
@@ -229,6 +229,7 @@
     }
   ]
 }
+
 
 
 
