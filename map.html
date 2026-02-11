@@ -397,9 +397,17 @@
       // Bubble/iFrame Layout kann noch nachziehen
       setTimeout(() => redrawAll(), 250);
     });
+    // Bubble/Wrapper Resize-Kick
+    window.addEventListener("message", (ev) => {
+      if (ev.data && ev.data.type === "forceResize") {
+        try { map.resize(); } catch(e) {}
+        try { redrawAll && redrawAll(); } catch(e) {}
+      }
+    });
   </script>
 </body>
 </html>
+
 
 
 
