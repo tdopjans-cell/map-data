@@ -1,0 +1,38 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "city-cologne",
+        "name_de": "Köln",
+        "name_en": "Cologne",
+        "kind": "city",
+        "adm1": "DE-NW"
+      },
+      "geometry": { "type": "Point", "coordinates": [6.9603, 50.9375] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "city-dusseldorf",
+        "name_de": "Düsseldorf",
+        "name_en": "Düsseldorf",
+        "kind": "city",
+        "adm1": "DE-NW"
+      },
+      "geometry": { "type": "Point", "coordinates": [6.7735, 51.2277] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "city-munich",
+        "name_de": "München",
+        "name_en": "Munich",
+        "kind": "city",
+        "adm1": "DE-BY"
+      },
+      "geometry": { "type": "Point", "coordinates": [11.5820, 48.1351] }
+    }
+  ]
+}
