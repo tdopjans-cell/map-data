@@ -339,12 +339,14 @@
           ? String(p.NAME_1 || p.NAME_DE || p.NAME || p.name_de || p.name || "")
           : String(p.NAME_DE || p.NAME || p.name_de || p.name || "");
 
-      const id =
-        currentLevel === "europe"
-          ? String(p.ISO_A2 || name)
-          : String(p.ISO_3166_2 || name);
-
       const kind = (f.layer && f.layer.id === "de-places") ? "city" : "area";
+      
+      const id =
+        kind === "city"
+          ? String(p.id || p.ID || name) // aus de_places.json
+          : (currentLevel === "europe"
+              ? String(p.ISO_A2 || name)
+              : String(p.iso_3166_2 || p.ISO_3166_2 || name));
 
       window.parent.postMessage({
         type: "select",
@@ -407,6 +409,7 @@
   </script>
 </body>
 </html>
+
 
 
 
