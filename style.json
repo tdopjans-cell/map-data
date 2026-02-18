@@ -31,7 +31,8 @@
 
     "de_places": {
       "type": "geojson",
-      "data": "./de_places.json"
+      "data": "./de_places.json",
+      "promoteId": "id"
     },
 
     "flags": {
@@ -254,6 +255,7 @@
     }
   ]
 }
+
 
 
 
