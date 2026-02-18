@@ -31,9 +31,12 @@
     // Hover/Selected state (separat pro Level!)
     let hoveredIdEU = null;
     let hoveredIdDE = null;
-
     let selectedIdEU = null;
     let selectedIdDE = null;
+
+    // City hover/selected (nur DE)
+    let hoveredCityIdDE = null;
+    let selectedCityIdDE = null;
 
     const map = new maplibregl.Map({
       container: "map",
@@ -164,19 +167,25 @@
       const showEurope = level === "europe";
       const showGermany = level === "germany";
 
+      // EU
       safeSetVisibility("eu-countries-fill", showEurope);
       safeSetVisibility("eu-countries-line", showEurope);
       safeSetVisibility("eu-country-labels", showEurope);
 
+      // DE
       safeSetVisibility("de-states-fill", showGermany);
       safeSetVisibility("de-states-line", showGermany);
       safeSetVisibility("de-state-labels", showGermany);
-      safeSetVisibility("de-places", showGermany);
+
+      // Cities: wichtig -> neue Layernamen
+      safeSetVisibility("de-places-hitbox", showGermany);
+      safeSetVisibility("de-places-dot", showGermany);
       safeSetVisibility("de-place-labels", showGermany);
 
       // Hover reset
       clearHoverEU();
       clearHoverDE();
+      clearHoverCityDE();
 
       if (level === "europe") {
         map.flyTo({ center: [12, 52], zoom: 3.5, duration: 900 });
@@ -203,6 +212,14 @@
       hoveredIdDE = null;
     }
 
+    // --- City hover (DE) ---
+    function clearHoverCityDE() {
+      if (hoveredCityIdDE !== null && map.getSource("de_places")) {
+        try { map.setFeatureState({ source: "de_places", id: hoveredCityIdDE }, { hover: false }); } catch(e){}
+      }
+      hoveredCityIdDE = null;
+    }
+
     // --- Selected handling: getrennt ---
     function setSelectedEU(featureId) {
       if (!map.getSource("eu_countries")) return;
@@ -223,6 +240,18 @@
       selectedIdDE = featureId;
       if (selectedIdDE !== null) {
         try { map.setFeatureState({ source: "de_states", id: selectedIdDE }, { selected: true }); } catch(e){}
+      }
+    }
+
+    // --- City selected (DE) ---
+    function setSelectedCityDE(cityFeatureId) {
+      if (!map.getSource("de_places")) return;
+      if (selectedCityIdDE !== null) {
+        try { map.setFeatureState({ source: "de_places", id: selectedCityIdDE }, { selected: false }); } catch(e){}
+      }
+      selectedCityIdDE = cityFeatureId;
+      if (selectedCityIdDE !== null) {
+        try { map.setFeatureState({ source: "de_places", id: selectedCityIdDE }, { selected: true }); } catch(e){}
       }
     }
 
@@ -273,10 +302,36 @@
 
     // ===== Hover effect =====
     map.on("mousemove", (e) => {
-      const layerId = (currentLevel === "germany") ? "de-states-fill" : "eu-countries-fill";
-      if (!map.getLayer(layerId)) return;
 
-      const feats = map.queryRenderedFeatures(e.point, { layers: [layerId] });
+      // ---- Germany: zuerst City-Hitbox testen ----
+      if (currentLevel === "germany" && map.getLayer("de-places-hitbox")) {
+        const cityHits = map.queryRenderedFeatures(e.point, { layers: ["de-places-hitbox"] });
+        if (cityHits.length) {
+          const c = cityHits[0];
+          const cid = (c.id !== undefined && c.id !== null) ? c.id : null;
+
+          // set city hover
+          if (hoveredCityIdDE !== null && hoveredCityIdDE !== cid) {
+            try { map.setFeatureState({ source: "de_places", id: hoveredCityIdDE }, { hover: false }); } catch(e){}
+          }
+          hoveredCityIdDE = cid;
+          if (hoveredCityIdDE !== null) {
+            try { map.setFeatureState({ source: "de_places", id: hoveredCityIdDE }, { hover: true }); } catch(e){}
+          }
+
+          // optional: polygon hover aus
+          clearHoverDE();
+          return;
+        } else {
+          clearHoverCityDE();
+        }
+      }
+
+      // ---- Polygon hover (EU/DE) ----
+      const polyLayerId = (currentLevel === "germany") ? "de-states-fill" : "eu-countries-fill";
+      if (!map.getLayer(polyLayerId)) return;
+
+      const feats = map.queryRenderedFeatures(e.point, { layers: [polyLayerId] });
       if (!feats.length) {
         clearHoverEU();
         clearHoverDE();
@@ -308,30 +363,52 @@
     map.on("mouseleave", () => {
       clearHoverEU();
       clearHoverDE();
+      clearHoverCityDE();
     });
 
     // ===== Click -> Bubble select + highlight =====
     map.on("click", (e) => {
-      const layers = currentLevel === "germany"
-        ? ["de-states-fill", "de-places"]
-        : ["eu-countries-fill"];
 
-      if (!layers.every(id => map.getLayer(id))) return;
+      // Germany: City priorisieren (Hitbox)
+      if (currentLevel === "germany" && map.getLayer("de-places-hitbox")) {
+        const cityHits = map.queryRenderedFeatures(e.point, { layers: ["de-places-hitbox"] });
+        if (cityHits.length) {
+          const c = cityHits[0];
+          const p = c.properties || {};
+          const cid = (c.id !== undefined && c.id !== null) ? c.id : null;
 
-      const feats = map.queryRenderedFeatures(e.point, { layers });
+          if (cid !== null) setSelectedCityDE(cid);
+
+          const name = String(p.name_de || p.NAME_DE || p.name || p.NAME || "");
+          const id = String(p.id || p.ID || name);
+
+          window.parent.postMessage({
+            type: "select",
+            payload: { id, name, kind: "city", level: currentLevel, lng: e.lngLat.lng, lat: e.lngLat.lat }
+          }, "*");
+          return;
+        }
+      }
+
+      // EU/DE: Polygon
+      const layerId = (currentLevel === "germany") ? "de-states-fill" : "eu-countries-fill";
+      if (!map.getLayer(layerId)) return;
+
+      const feats = map.queryRenderedFeatures(e.point, { layers: [layerId] });
       if (!feats.length) return;
 
       const f = feats[0];
       const p = f.properties || {};
 
-      // highlight polygon if area
-      const isArea = (f.geometry && (f.geometry.type === "Polygon" || f.geometry.type === "MultiPolygon"));
       if (currentLevel === "germany") {
-      console.log("DE click:", "feature.id=", f.id, "ISO_3166_2=", (p.ISO_3166_2 || null));
-    }
-      if (isArea && f.id !== undefined && f.id !== null) {
-        if (currentLevel === "europe") setSelectedEU(f.id);
-        if (currentLevel === "germany") setSelectedDE(f.id);
+        console.log("DE click:", "feature.id=", f.id, "iso_3166_2=", (p.iso_3166_2 || p.ISO_3166_2 || null));
+      }
+
+      // highlight polygon
+      const fid = (f.id !== undefined && f.id !== null) ? f.id : null;
+      if (fid !== null) {
+        if (currentLevel === "europe") setSelectedEU(fid);
+        if (currentLevel === "germany") setSelectedDE(fid);
       }
 
       const name =
@@ -339,18 +416,14 @@
           ? String(p.NAME_1 || p.NAME_DE || p.NAME || p.name_de || p.name || "")
           : String(p.NAME_DE || p.NAME || p.name_de || p.name || "");
 
-      const kind = (f.layer && f.layer.id === "de-places") ? "city" : "area";
-      
       const id =
-        kind === "city"
-          ? String(p.id || p.ID || name) // aus de_places.json
-          : (currentLevel === "europe"
-              ? String(p.ISO_A2 || name)
-              : String(p.iso_3166_2 || p.ISO_3166_2 || name));
+        (currentLevel === "europe")
+          ? String(p.ISO_A2 || name)
+          : String(p.iso_3166_2 || p.ISO_3166_2 || name);
 
       window.parent.postMessage({
         type: "select",
-        payload: { id, name, kind, level: currentLevel, lng: e.lngLat.lng, lat: e.lngLat.lat }
+        payload: { id, name, kind: "area", level: currentLevel, lng: e.lngLat.lng, lat: e.lngLat.lat }
       }, "*");
     });
 
@@ -399,16 +472,18 @@
       // Bubble/iFrame Layout kann noch nachziehen
       setTimeout(() => redrawAll(), 250);
     });
+
     // Bubble/Wrapper Resize-Kick
     window.addEventListener("message", (ev) => {
       if (ev.data && ev.data.type === "forceResize") {
         try { map.resize(); } catch(e) {}
-        try { redrawAll && redrawAll(); } catch(e) {}
+        try { redrawAll(); } catch(e) {}
       }
     });
   </script>
 </body>
 </html>
+
 
 
 
