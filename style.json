@@ -160,7 +160,7 @@
       "id": "de-places-hitbox",
       "type": "circle",
       "source": "de_places",
-      "minzoom": 7.2,
+      "minzoom": 6,
       "layout": { "visibility": "none" },
       "paint": {
         "circle-radius": [
@@ -184,7 +184,7 @@
       "id": "de-places-dot",
       "type": "circle",
       "source": "de_places",
-      "minzoom": 7.2,
+      "minzoom": 6,
       "layout": { "visibility": "none" },
       "paint": {
         "circle-radius": 3,
@@ -195,7 +195,7 @@
       "id": "de-place-labels",
       "type": "symbol",
       "source": "de_places",
-      "minzoom": 7.2,
+      "minzoom": 6,
       "layout": {
         "visibility": "none",
         "text-field": ["coalesce", ["get", "name_de"], ["get", "NAME_DE"], ["get", "name"], ["get", "NAME"]],
@@ -227,6 +227,7 @@
     }
   ]
 }
+
 
 
 
