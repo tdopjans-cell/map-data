@@ -137,17 +137,17 @@
         "line-width": 1
       }
     },
-    {
+      {
       "id": "de-state-labels",
       "type": "symbol",
       "source": "de_state_points",
-      "minzoom": 5.6,
+      "maxzoom": 6.6,
       "layout": {
         "visibility": "none",
         "symbol-placement": "point",
         "text-field": ["coalesce", ["get", "NAME_DE"], ["get", "NAME"], ["get", "name_de"], ["get", "name"]],
         "text-font": ["Noto Sans Regular"],
-        "text-size": 13,
+        "text-size": 12,
         "text-allow-overlap": false
       },
       "paint": {
@@ -160,7 +160,7 @@
       "id": "de-places-hitbox",
       "type": "circle",
       "source": "de_places",
-      "minzoom": 6,
+      "minzoom": 6.7,
       "layout": { "visibility": "none" },
       "paint": {
         "circle-radius": [
@@ -184,34 +184,34 @@
       "id": "de-places-dot",
       "type": "circle",
       "source": "de_places",
-      "minzoom": 6,
+      "minzoom": 6.7,
       "layout": { "visibility": "none" },
       "paint": {
         "circle-radius": 3,
         "circle-color": "rgba(0,0,0,0.75)"
       }
     },
-    {
+      {
       "id": "de-place-labels",
       "type": "symbol",
       "source": "de_places",
-      "minzoom": 6,
+      "minzoom": 6.7,
       "layout": {
         "visibility": "none",
         "text-field": ["coalesce", ["get", "name_de"], ["get", "NAME_DE"], ["get", "name"], ["get", "NAME"]],
-        "text-font": ["Noto Sans Bold", "Noto Sans Regular"],
+        "text-font": ["Noto Sans Regular"],
         "text-size": 11,
-        "text-offset": [0, 0],
-        "text-anchor": "center",
-        "text-allow-overlap": false
+        "text-letter-spacing": 0.03,
+        "text-allow-overlap": true,
+        "text-ignore-placement": true,
+        "text-anchor": "center"
       },
-        "paint": {
-          "text-color": "rgba(10,10,10,0.92)",
-          "text-halo-color": "rgba(255,255,255,0.95)",
-          "text-halo-width": 1.8
-        }
+      "paint": {
+        "text-color": "rgba(10,10,10,0.85)",
+        "text-halo-color": "rgba(255,255,255,0.98)",
+        "text-halo-width": 1.2
+      }
     },
-
     {
       "id": "flags",
       "type": "symbol",
@@ -227,6 +227,7 @@
     }
   ]
 }
+
 
 
 
