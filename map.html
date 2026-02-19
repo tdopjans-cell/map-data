@@ -308,6 +308,7 @@
         const cityHits = map.queryRenderedFeatures(e.point, { layers: ["de-places-hitbox"] });
         if (cityHits.length) {
           const c = cityHits[0];
+          console.log("CITY HIT:", c.id, c.properties?.id, c.properties?.name_de);
           const cid = (c.id !== undefined && c.id !== null) ? c.id : null;
 
           // set city hover
@@ -485,6 +486,7 @@
   </script>
 </body>
 </html>
+
 
 
 
