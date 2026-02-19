@@ -368,20 +368,20 @@
 
     // ===== Click -> Bubble select + highlight =====
     map.on("click", (e) => {
-
-      // Germany: City priorisieren (Hitbox)
+    
+      // 1) Germany: City priorisieren (Hitbox)
       if (currentLevel === "germany" && map.getLayer("de-places-hitbox")) {
         const cityHits = map.queryRenderedFeatures(e.point, { layers: ["de-places-hitbox"] });
         if (cityHits.length) {
           const c = cityHits[0];
           const p = c.properties || {};
           const cid = (c.id !== undefined && c.id !== null) ? c.id : null;
-
+    
           if (cid !== null) setSelectedCityDE(cid);
-
+    
           const name = String(p.name_de || p.NAME_DE || p.name || p.NAME || "");
           const id = String(p.id || p.ID || name);
-
+    
           window.parent.postMessage({
             type: "select",
             payload: { id, name, kind: "city", level: currentLevel, lng: e.lngLat.lng, lat: e.lngLat.lat }
@@ -389,38 +389,40 @@
           return;
         }
       }
-
-      // EU/DE: Polygon
-      const layerId = (currentLevel === "germany") ? ["de-places-hitbox", "de-states-fill"] : "eu-countries-fill";
-      if (!map.getLayer(layerId)) return;
-
-      const feats = map.queryRenderedFeatures(e.point, { layers: [layerId] });
+    
+      // 2) Polygon click (EU/DE)
+      const polyLayers = (currentLevel === "germany")
+        ? ["de-states-fill"]
+        : ["eu-countries-fill"];
+    
+      if (!polyLayers.every(id => map.getLayer(id))) return;
+    
+      const feats = map.queryRenderedFeatures(e.point, { layers: polyLayers });
       if (!feats.length) return;
-
+    
       const f = feats[0];
       const p = f.properties || {};
-
-      if (currentLevel === "germany") {
-        console.log("DE click:", "feature.id=", f.id, "iso_3166_2=", (p.iso_3166_2 || p.ISO_3166_2 || null));
-      }
-
-      // highlight polygon
       const fid = (f.id !== undefined && f.id !== null) ? f.id : null;
+    
+      if (currentLevel === "germany") {
+        console.log("DE polygon click:", "feature.id=", f.id, "iso_3166_2=", (p.iso_3166_2 || p.ISO_3166_2 || null));
+      }
+    
       if (fid !== null) {
         if (currentLevel === "europe") setSelectedEU(fid);
         if (currentLevel === "germany") setSelectedDE(fid);
       }
-
+    
       const name =
         currentLevel === "germany"
           ? String(p.NAME_1 || p.NAME_DE || p.NAME || p.name_de || p.name || "")
           : String(p.NAME_DE || p.NAME || p.name_de || p.name || "");
-
+    
       const id =
         (currentLevel === "europe")
           ? String(p.ISO_A2 || name)
           : String(p.iso_3166_2 || p.ISO_3166_2 || name);
-
+    
       window.parent.postMessage({
         type: "select",
         payload: { id, name, kind: "area", level: currentLevel, lng: e.lngLat.lng, lat: e.lngLat.lat }
@@ -483,6 +485,7 @@
   </script>
 </body>
 </html>
+
 
 
 
