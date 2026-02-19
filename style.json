@@ -141,9 +141,9 @@
       "id": "de-state-labels",
       "type": "symbol",
       "source": "de_state_points",
+      "minzoom": 5.6,
       "layout": {
         "visibility": "none",
-        "minzoom": 5.6,
         "symbol-placement": "point",
         "text-field": ["coalesce", ["get", "NAME_DE"], ["get", "NAME"], ["get", "name_de"], ["get", "name"]],
         "text-font": ["Noto Sans Regular"],
@@ -160,7 +160,8 @@
       "id": "de-places-hitbox",
       "type": "circle",
       "source": "de_places",
-      "layout": { "visibility": "none", "minzoom": 7.2 },
+      "minzoom": 7.2,
+      "layout": { "visibility": "none" },
       "paint": {
         "circle-radius": [
           "interpolate", ["linear"], ["zoom"],
@@ -183,7 +184,8 @@
       "id": "de-places-dot",
       "type": "circle",
       "source": "de_places",
-      "layout": { "visibility": "none", "minzoom": 7.2 },
+      "minzoom": 7.2,
+      "layout": { "visibility": "none" },
       "paint": {
         "circle-radius": 3,
         "circle-color": "rgba(0,0,0,0.75)"
@@ -193,9 +195,9 @@
       "id": "de-place-labels",
       "type": "symbol",
       "source": "de_places",
+      "minzoom": 7.2,
       "layout": {
         "visibility": "none",
-        "minzoom": 7.2,
         "text-field": ["coalesce", ["get", "name_de"], ["get", "NAME_DE"], ["get", "name"], ["get", "NAME"]],
         "text-font": ["Noto Sans Bold", "Noto Sans Regular"],
         "text-size": 11,
@@ -225,6 +227,7 @@
     }
   ]
 }
+
 
 
 
