@@ -14,13 +14,13 @@
 
     "eu_countries": {
       "type": "geojson",
-      "data": "./europe.json",
+      "data": "./europe_detailed.json",
       "promoteId": "ISO_A2"
     },
 
     "de_states": {
       "type": "geojson",
-      "data": "./germany.json",
+      "data": "./germany_detailed.json",
       "promoteId": "iso_3166_2"
     },
 
@@ -227,6 +227,7 @@
     }
   ]
 }
+
 
 
 
