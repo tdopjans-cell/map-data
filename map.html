@@ -391,7 +391,7 @@
       }
 
       // EU/DE: Polygon
-      const layerId = (currentLevel === "germany") ? "de-states-fill" : "eu-countries-fill";
+      const layerId = (currentLevel === "germany") ? ["de-places-hitbox", "de-states-fill"] : "eu-countries-fill";
       if (!map.getLayer(layerId)) return;
 
       const feats = map.queryRenderedFeatures(e.point, { layers: [layerId] });
@@ -483,6 +483,7 @@
   </script>
 </body>
 </html>
+
 
 
 
