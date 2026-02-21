@@ -461,6 +461,17 @@
     
       const f = feats[0];
       const p = f.properties || {};
+      if (currentLevel === "europe") {
+        console.log("EU props debug:", {
+          NAME: p.NAME,
+          NAME_EN: p.NAME_EN,
+          NAME_DE: p.NAME_DE,
+          ISO_A2: p.ISO_A2,
+          iso_a2: p.iso_a2,
+          ADM0_A3: p.ADM0_A3,
+          id: f.id
+        });
+      }
       const fid = (f.id !== undefined && f.id !== null) ? f.id : null;
     
       if (currentLevel === "germany") {
@@ -557,6 +568,7 @@
   </script>
 </body>
 </html>
+
 
 
 
