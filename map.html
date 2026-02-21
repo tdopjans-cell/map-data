@@ -37,8 +37,8 @@
       const [euRes, deRes] = await Promise.all([fetch(EU_POINTS_URL), fetch(DE_POINTS_URL)]);
       const [euJson, deJson] = await Promise.all([euRes.json(), deRes.json()]);
 
-      euInnerPointByIsoA2 = indexPoints(euJson, "ISO_A2");
-      deInnerPointByIso3166_2 = indexPoints(deJson, "iso_3166_2");
+      euInnerPointByIsoA2 = indexPoints(euJson, ["ADM0_A3", "ISO_A2", "iso_a2"]);
+      deInnerPointByIso3166_2 = indexPoints(deJson, ["iso_3166_2", "ISO_3166_2"]);
 
       console.log("✅ Inner points loaded:", {
         eu: Object.keys(euInnerPointByIsoA2).length,
@@ -50,26 +50,33 @@
     }
   }
 
-  function indexPoints(geojson, keyProp) {
-    const out = {};
-    if (!geojson || !Array.isArray(geojson.features)) return out;
-
-    for (const f of geojson.features) {
-      const key = f?.properties?.[keyProp];
-      const coords = f?.geometry?.coordinates;
-      if (!key || !coords || coords.length < 2) continue;
-      out[String(key)] = coords; // [lng, lat]
+    function indexPoints(geojson, keyProps) {
+      const out = {};
+      if (!geojson || !Array.isArray(geojson.features)) return out;
+    
+      for (const f of geojson.features) {
+        const props = f?.properties || {};
+        let key = "";
+    
+        for (const kp of keyProps) {
+          const v = String(props?.[kp] ?? "").trim();
+          if (v && v !== "-99") { key = v; break; }
+        }
+    
+        const coords = f?.geometry?.coordinates;
+        if (!key || !coords || coords.length < 2) continue;
+        out[key] = coords; // [lng, lat]
+      }
+      return out;
     }
-    return out;
-  }
 
   function getInnerPointForArea(level, props, fallbackLngLat) {
     // fallbackLngLat = e.lngLat
     const fallback = [fallbackLngLat.lng, fallbackLngLat.lat];
 
     if (level === "europe") {
-      const isoA2 = String(props?.ISO_A2 || props?.iso_a2 || "");
-      return euInnerPointByIsoA2[isoA2] || fallback;
+      const key = pickCountryId(props); // liefert ADM0_A3 bevorzugt
+      return (key && euInnerPointByIsoA2[key]) || fallback;
     }
 
     if (level === "germany") {
@@ -78,6 +85,20 @@
     }
 
     return fallback;
+  }
+    function pickCountryId(props) {
+    // ISO_A2 ist manchmal "-99" (z.B. France in deinem Datensatz)
+    const iso2 = String(props?.ISO_A2 || props?.iso_a2 || "").trim();
+    const a3   = String(props?.ADM0_A3 || props?.adm0_a3 || "").trim();
+  
+    // Wenn ISO_A2 gültig ist, kannst du es nutzen – aber A3 ist weltweit stabiler.
+    // Wir nehmen A3 bevorzugt, weil du weltweit skalieren willst.
+    if (a3) return a3;
+  
+    // Fallback: nur wenn A3 fehlt
+    if (iso2 && iso2 !== "-99") return iso2;
+  
+    return "";
   }
 
     let currentLevel = "europe";
@@ -490,7 +511,7 @@
     
       const id =
         (currentLevel === "europe")
-          ? String(p.ISO_A2 || p.iso_a2 || p.ADM0_A3 || name)
+          ? (pickCountryId(p) || String(name))
           : String(p.iso_3166_2 || p.ISO_3166_2 || name);
     
       // ✅ HIER: Centerpoint (inner point) statt Klickpunkt
@@ -568,6 +589,7 @@
   </script>
 </body>
 </html>
+
 
 
 
