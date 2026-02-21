@@ -21,8 +21,64 @@
     <canvas id="routeCanvas"></canvas>
   </div>
 
-  <script>
-    const STYLE_URL = "./style.json?v=1";
+<script>
+  const STYLE_URL = "./style.json?v=1";
+
+  // ===== Inner points (Centroids) =====
+  // 👉 Ersetze die URLs durch deine RAW GitHub Links (wie in style.json sources)
+  const EU_POINTS_URL = "./europe_inner_points.json";
+  const DE_POINTS_URL = "./germany_inner_points.json";
+
+  let euInnerPointByIsoA2 = {};        // { "DE": [lng, lat], ... }
+  let deInnerPointByIso3166_2 = {};    // { "DE-BW": [lng, lat], ... }
+
+  async function loadInnerPoints() {
+    try {
+      const [euRes, deRes] = await Promise.all([fetch(EU_POINTS_URL), fetch(DE_POINTS_URL)]);
+      const [euJson, deJson] = await Promise.all([euRes.json(), deRes.json()]);
+
+      euInnerPointByIsoA2 = indexPoints(euJson, "ISO_A2");
+      deInnerPointByIso3166_2 = indexPoints(deJson, "iso_3166_2");
+
+      console.log("✅ Inner points loaded:", {
+        eu: Object.keys(euInnerPointByIsoA2).length,
+        de: Object.keys(deInnerPointByIso3166_2).length
+      });
+    } catch (err) {
+      console.warn("⚠️ Failed to load inner points JSON:", err);
+      // Falls GitHub blockt / URL falsch: dann fällt es später automatisch auf e.lngLat zurück
+    }
+  }
+
+  function indexPoints(geojson, keyProp) {
+    const out = {};
+    if (!geojson || !Array.isArray(geojson.features)) return out;
+
+    for (const f of geojson.features) {
+      const key = f?.properties?.[keyProp];
+      const coords = f?.geometry?.coordinates;
+      if (!key || !coords || coords.length < 2) continue;
+      out[String(key)] = coords; // [lng, lat]
+    }
+    return out;
+  }
+
+  function getInnerPointForArea(level, props, fallbackLngLat) {
+    // fallbackLngLat = e.lngLat
+    const fallback = [fallbackLngLat.lng, fallbackLngLat.lat];
+
+    if (level === "europe") {
+      const isoA2 = String(props?.ISO_A2 || props?.iso_a2 || "");
+      return euInnerPointByIsoA2[isoA2] || fallback;
+    }
+
+    if (level === "germany") {
+      const iso = String(props?.iso_3166_2 || props?.ISO_3166_2 || "");
+      return deInnerPointByIso3166_2[iso] || fallback;
+    }
+
+    return fallback;
+  }
 
     let currentLevel = "europe";
     let selected = { start: null, stops: [], end: null };
@@ -383,9 +439,11 @@
           const name = String(p.name_de || p.NAME_DE || p.name || p.NAME || "");
           const id = String(p.id || p.ID || name);
     
+          const [lng, lat] = getInnerPointForArea(currentLevel, p, e.lngLat);
+          
           window.parent.postMessage({
             type: "select",
-            payload: { id, name, kind: "city", level: currentLevel, lng: e.lngLat.lng, lat: e.lngLat.lat }
+            payload: { id, name, kind: "area", level: currentLevel, lng, lat }
           }, "*");
           return;
         }
@@ -421,7 +479,7 @@
     
       const id =
         (currentLevel === "europe")
-          ? String(p.ISO_A2 || p.iso_a2 || p.ADM0_A3 || name);
+          ? String(p.ISO_A2 || p.iso_a2 || p.ADM0_A3 || name)
           : String(p.iso_3166_2 || p.ISO_3166_2 || name);
     
       window.parent.postMessage({
@@ -463,7 +521,7 @@
 
     map.on("load", async () => {
       redrawAll();
-
+      await loadInnerPoints();
       await addIconSafe("flag-start", "./flag_start.png");
       await addIconSafe("flag-stop", "./flag_stop.png");
       await addIconSafe("flag-end", "./flag_end.png");
@@ -486,6 +544,7 @@
   </script>
 </body>
 </html>
+
 
 
 
