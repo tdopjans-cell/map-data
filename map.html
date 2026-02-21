@@ -439,25 +439,12 @@
           const name = String(p.name_de || p.NAME_DE || p.name || p.NAME || "");
           const id = String(p.id || p.ID || name);
     
-          const [lng, lat] = getInnerPointForArea(currentLevel, p, e.lngLat);
-          
-          // ✅ Centerpoint statt Klickpunkt nehmen
-          const [lng, lat] = getInnerPointForArea(currentLevel, p, e.lngLat);
-          
-          // ✅ Debug: Was schicken wir wirklich an Bubble?
-          console.log("➡️ POSTMESSAGE select(area):", {
-            level: currentLevel,
-            id,
-            name,
-            click: [e.lngLat.lng, e.lngLat.lat],
-            sent: [lng, lat],
-            usedInnerPoint: (lng !== e.lngLat.lng || lat !== e.lngLat.lat)
-          });
-          
+          // ✅ City bleibt erstmal Klickpunkt (wie vorher)
           window.parent.postMessage({
             type: "select",
-            payload: { id, name, kind: "area", level: currentLevel, lng, lat }
+            payload: { id, name, kind: "city", level: currentLevel, lng: e.lngLat.lng, lat: e.lngLat.lat }
           }, "*");
+    
           return;
         }
       }
@@ -495,9 +482,22 @@
           ? String(p.ISO_A2 || p.iso_a2 || p.ADM0_A3 || name)
           : String(p.iso_3166_2 || p.ISO_3166_2 || name);
     
+      // ✅ HIER: Centerpoint (inner point) statt Klickpunkt
+      const [centerLng, centerLat] = getInnerPointForArea(currentLevel, p, e.lngLat);
+    
+      // ✅ Debug Log: siehst du in der Konsole
+      console.log("➡️ POSTMESSAGE select(area):", {
+        level: currentLevel,
+        id,
+        name,
+        click: [e.lngLat.lng, e.lngLat.lat],
+        sent: [centerLng, centerLat],
+        usedInnerPoint: (centerLng !== e.lngLat.lng || centerLat !== e.lngLat.lat)
+      });
+    
       window.parent.postMessage({
         type: "select",
-        payload: { id, name, kind: "area", level: currentLevel, lng: e.lngLat.lng, lat: e.lngLat.lat }
+        payload: { id, name, kind: "area", level: currentLevel, lng: centerLng, lat: centerLat }
       }, "*");
     });
 
@@ -557,6 +557,7 @@
   </script>
 </body>
 </html>
+
 
 
 
