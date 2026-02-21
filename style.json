@@ -11,7 +11,10 @@
       "scheme": "tms",
       "attribution": "Natural Earth II"
     },
-
+    "eu_country_points": {
+      "type": "geojson",
+      "data": "./europe_inner_points.json"
+    },
     "eu_countries": {
       "type": "geojson",
       "data": "./europe_detailed.json",
@@ -91,13 +94,15 @@
     {
       "id": "eu-country-labels",
       "type": "symbol",
-      "source": "eu_countries",
+      "source": "eu_country_points",
       "layout": {
         "visibility": "visible",
         "symbol-placement": "point",
-        "text-field": ["coalesce", ["get", "NAME_DE"], ["get", "NAME"], ["get", "name_de"], ["get", "name"]],
+        "text-field": ["coalesce", ["get", "NAME_DE"], ["get", "name_de"], ["get", "NAME"], ["get", "name"]],
         "text-font": ["Noto Sans Regular"],
         "text-size": 12,
+        "text-anchor": "top",
+        "text-offset": [0, 0.6],
         "text-allow-overlap": false
       },
       "paint": {
@@ -148,6 +153,8 @@
         "text-field": ["coalesce", ["get", "NAME_DE"], ["get", "NAME"], ["get", "name_de"], ["get", "name"]],
         "text-font": ["Noto Sans Regular"],
         "text-size": 12,
+        "text-anchor": "top",
+        "text-offset": [0, 0.6],
         "text-allow-overlap": false
       },
       "paint": {
@@ -227,6 +234,7 @@
     }
   ]
 }
+
 
 
 
