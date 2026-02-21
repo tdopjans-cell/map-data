@@ -441,6 +441,19 @@
     
           const [lng, lat] = getInnerPointForArea(currentLevel, p, e.lngLat);
           
+          // ✅ Centerpoint statt Klickpunkt nehmen
+          const [lng, lat] = getInnerPointForArea(currentLevel, p, e.lngLat);
+          
+          // ✅ Debug: Was schicken wir wirklich an Bubble?
+          console.log("➡️ POSTMESSAGE select(area):", {
+            level: currentLevel,
+            id,
+            name,
+            click: [e.lngLat.lng, e.lngLat.lat],
+            sent: [lng, lat],
+            usedInnerPoint: (lng !== e.lngLat.lng || lat !== e.lngLat.lat)
+          });
+          
           window.parent.postMessage({
             type: "select",
             payload: { id, name, kind: "area", level: currentLevel, lng, lat }
@@ -544,6 +557,7 @@
   </script>
 </body>
 </html>
+
 
 
 
