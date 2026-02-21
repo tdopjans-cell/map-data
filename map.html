@@ -421,7 +421,7 @@
     
       const id =
         (currentLevel === "europe")
-          ? String(p.ISO_A2 || name)
+          ? String(p.ISO_A2 || p.iso_a2 || p.ADM0_A3 || name);
           : String(p.iso_3166_2 || p.ISO_3166_2 || name);
     
       window.parent.postMessage({
@@ -486,6 +486,7 @@
   </script>
 </body>
 </html>
+
 
 
 
