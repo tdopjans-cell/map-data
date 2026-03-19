@@ -224,30 +224,25 @@
       }
     },
         {
-      "id": "search-selection-icon",
-      "type": "symbol",
-      "source": "search_selection",
-      "layout": {
-        "icon-image": "search-flag",
-        "icon-size": ["interpolate", ["linear"], ["zoom"],
-            4, 0.10,
-            7, 0.14,
-            10, 0.18,
-            13, 0.22
-          ],
-        "icon-allow-overlap": true,
-        "icon-anchor": "bottom",
-        "icon-rotate": 180,
-        "icon-rotation-alignment": "viewport"
-      }
-    },
-    {
+        "id": "search-selection-icon",
+        "type": "symbol",
+        "source": "search_selection",
+        "layout": {
+          "icon-image": "search-flag",
+          "icon-size": ["interpolate", ["linear"], ["zoom"], 4, 0.10, 7, 0.14, 10, 0.18, 13, 0.22],
+          "icon-allow-overlap": true,
+          "icon-anchor": "bottom",
+          "icon-rotate": 180,
+          "icon-rotation-alignment": "viewport"
+        }
+      },
+       {
       "id": "search-selection-label",
       "type": "symbol",
       "source": "search_selection",
       "layout": {
         "text-field": ["get", "name"],
-        "text-size": 13,
+        "text-size": ["interpolate", ["linear"], ["zoom"], 4, 10, 7, 11, 10, 13, 13, 14],
         "text-offset": [0, 0.8],
         "text-anchor": "top",
         "text-allow-overlap": true
