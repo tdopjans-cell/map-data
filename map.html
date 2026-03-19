@@ -343,7 +343,37 @@
         console.warn("Icon load fail", name, url, e);
       }
     }
-
+    // ===== Search Selection (pending buffer) =====
+    let pendingSearchSelection = null;
+    
+    function setSearchSelectionOnMap(lng, lat, name) {
+      const src = map.getSource("search_selection");
+      if (!src) {
+        // Style/Source ist noch nicht bereit -> merken
+        pendingSearchSelection = { lng, lat, name };
+        return;
+      }
+    
+      const fc = {
+        type: "FeatureCollection",
+        features: [{
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [lng, lat] },
+          properties: { name: String(name || "") }
+        }]
+      };
+    
+      src.setData(fc);
+    }
+    
+    function clearSearchSelectionOnMap() {
+      const src = map.getSource("search_selection");
+      if (!src) {
+        pendingSearchSelection = null;
+        return;
+      }
+      src.setData({ type: "FeatureCollection", features: [] });
+    }
     function updateFlagsGeojson() {
       const feats = [];
 
@@ -562,6 +592,16 @@
         // ✅ ganz wichtig gegen “oben links”
         redrawAll();
       }
+            // ===== Search selection messages =====
+      if (msg.type === "showSearchSelection") {
+        const p = msg.payload || {};
+        if (!Number.isFinite(p.lng) || !Number.isFinite(p.lat)) return;
+        setSearchSelectionOnMap(p.lng, p.lat, p.name);
+      }
+      
+      if (msg.type === "clearSearchSelection") {
+        clearSearchSelectionOnMap();
+      }
     });
 
     map.on("load", async () => {
@@ -578,6 +618,12 @@
 
       // Bubble/iFrame Layout kann noch nachziehen
       setTimeout(() => redrawAll(), 250);
+      // ===== Apply pending search selection after load =====
+      if (pendingSearchSelection) {
+        const p = pendingSearchSelection;
+        pendingSearchSelection = null;
+        setSearchSelectionOnMap(p.lng, p.lat, p.name);
+      }
     });
 
     // Bubble/Wrapper Resize-Kick
