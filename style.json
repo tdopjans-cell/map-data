@@ -229,9 +229,16 @@
       "source": "search_selection",
       "layout": {
         "icon-image": "search-flag",
-        "icon-size": 1,
+        "icon-size": ["interpolate", ["linear"], ["zoom"],
+            4, 0.10,
+            7, 0.14,
+            10, 0.18,
+            13, 0.22
+          ],
         "icon-allow-overlap": true,
-        "icon-anchor": "bottom"
+        "icon-anchor": "bottom",
+        "icon-rotate": 180,
+        "icon-rotation-alignment": "viewport"
       }
     },
     {
