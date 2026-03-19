@@ -223,6 +223,10 @@
         "text-halo-width": 1.2
       }
     },
+      {
+        "id": "search-selection-icon",
+        "type": "symbol",
+        "source": "search_selection",
         "layout": {
           "icon-image": "search-flag",
           "icon-size": ["interpolate", ["linear"], ["zoom"],
@@ -234,7 +238,8 @@
           "icon-allow-overlap": true,
           "icon-anchor": "bottom",
           "icon-rotation-alignment": "viewport"
-        },
+        }
+      },
        {
       "id": "search-selection-label",
       "type": "symbol",
