@@ -473,7 +473,130 @@
       clearHoverDE();
       clearHoverCityDE();
     });
-
+    // ===== Place Popup (MapLibre) =====
+    let placePopup = null;
+    let currentSelectedPlace = null; 
+    // { id, name, kind, level, lng, lat, placeLevel }  placeLevel = country/region/city/island/airport
+    
+    function buildPlacePopupDom(place) {
+      const wrap = document.createElement("div");
+      wrap.style.minWidth = "240px";
+      wrap.style.maxWidth = "280px";
+      wrap.style.fontFamily = "system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
+    
+      // Header
+      const title = document.createElement("div");
+      title.textContent = place.name || "Auswahl";
+      title.style.fontWeight = "700";
+      title.style.fontSize = "14px";
+      title.style.marginBottom = "6px";
+      wrap.appendChild(title);
+    
+      // Image placeholder
+      const img = document.createElement("div");
+      img.style.width = "100%";
+      img.style.height = "90px";
+      img.style.borderRadius = "10px";
+      img.style.background = "#e8f0ef";
+      img.style.display = "flex";
+      img.style.alignItems = "center";
+      img.style.justifyContent = "center";
+      img.style.color = "#3A5C58";
+      img.style.fontSize = "12px";
+      img.textContent = "Bild (Placeholder)";
+      wrap.appendChild(img);
+    
+      // Nice-to-know placeholder
+      const fact = document.createElement("div");
+      fact.style.marginTop = "8px";
+      fact.style.fontSize = "12px";
+      fact.style.color = "#0b2220";
+      fact.textContent = "Nice-to-know (Placeholder) – später aus PlaceContent-Cache.";
+      wrap.appendChild(fact);
+    
+      // Button row
+      const row = document.createElement("div");
+      row.style.display = "flex";
+      row.style.gap = "6px";
+      row.style.marginTop = "10px";
+      wrap.appendChild(row);
+    
+      function mkBtn(label) {
+        const b = document.createElement("button");
+        b.textContent = label;
+        b.style.flex = "1";
+        b.style.padding = "8px 10px";
+        b.style.borderRadius = "10px";
+        b.style.border = "1px solid #0b2220";
+        b.style.background = "#ffffff";
+        b.style.cursor = "pointer";
+        b.style.fontSize = "12px";
+        return b;
+      }
+    
+      const bStart = mkBtn("Start");
+      const bStop  = mkBtn("Zwischen");
+      const bEnd   = mkBtn("Ziel");
+    
+      row.appendChild(bStart);
+      row.appendChild(bStop);
+      row.appendChild(bEnd);
+    
+      const jump = mkBtn("Level tiefer ↘︎");
+      jump.style.marginTop = "8px";
+      jump.style.width = "100%";
+      wrap.appendChild(jump);
+    
+      function sendAction(action, extra = {}) {
+        // send to Bubble
+        window.parent.postMessage({
+          type: "placeAction",
+          payload: {
+            action,                // "setRole" | "jumpDeeper"
+            ...extra,
+            id: place.id,
+            name: place.name,
+            kind: place.kind,      // "area" | "city" | "airport" | "island"
+            level: place.level,    // "europe" | "germany" | ...
+            placeLevel: place.placeLevel, // "country/region/city/island/airport"
+            lng: place.lng,
+            lat: place.lat
+          }
+        }, "*");
+      }
+    
+      bStart.onclick = () => sendAction("setRole", { role: "Start" });
+      bStop.onclick  = () => sendAction("setRole", { role: "Zwischenstopp" });
+      bEnd.onclick   = () => sendAction("setRole", { role: "Ziel" });
+    
+      jump.onclick = () => sendAction("jumpDeeper");
+    
+      return wrap;
+    }
+    
+    function openPlacePopup(place) {
+      currentSelectedPlace = place;
+    
+      const dom = buildPlacePopupDom(place);
+    
+      if (!placePopup) {
+        placePopup = new maplibregl.Popup({
+          closeButton: true,
+          closeOnClick: false,
+          offset: 18
+        });
+      }
+    
+      placePopup
+        .setLngLat([place.lng, place.lat])
+        .setDOMContent(dom)
+        .addTo(map);
+    }
+    
+    function closePlacePopup() {
+      if (placePopup) placePopup.remove();
+      currentSelectedPlace = null;
+    }
     // ===== Click -> Bubble select + highlight =====
     map.on("click", (e) => {
     
@@ -489,7 +612,15 @@
     
           const name = String(p.name_de || p.NAME_DE || p.name || p.NAME || "");
           const id = String(p.id || p.ID || name);
-    
+              openPlacePopup({
+            id,
+            name,
+            kind: "area",
+            level: currentLevel,          // "europe" oder "germany"
+            placeLevel: (currentLevel === "europe") ? "country" : "region",
+            lng,
+            lat
+          });
           // ✅ City bleibt erstmal Klickpunkt (wie vorher)
           window.parent.postMessage({
             type: "select",
@@ -596,11 +727,24 @@
       if (msg.type === "showSearchSelection") {
         const p = msg.payload || {};
         if (!Number.isFinite(p.lng) || !Number.isFinite(p.lat)) return;
-        setSearchSelectionOnMap(p.lng, p.lat, p.name);
+      
+        // Pin setzen (das hast du schon über search_selection source)
+      
+        // Popup öffnen (kind/level/placeLevel können wir fürs MVP grob setzen)
+        openPlacePopup({
+          id: String(p.id || ""),              // optional, wenn du es mitschickst
+          name: String(p.name || ""),
+          kind: String(p.kind || "place"),     // optional, wenn du es mitschickst
+          level: currentLevel,
+          placeLevel: String(p.placeLevel || "city"),
+          lng: p.lng,
+          lat: p.lat
+        });
       }
       
       if (msg.type === "clearSearchSelection") {
-        clearSearchSelectionOnMap();
+        // Pin löschen (hast du)
+        closePlacePopup();
       }
     });
 
