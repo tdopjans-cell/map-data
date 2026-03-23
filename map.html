@@ -8,7 +8,6 @@
 
   <style>
     html, body { margin:0; padding:0; height:100%; width:100%; }
-    /* In Bubble iFrame ist 100% stabiler als 100vh */
     #wrap { position:relative; width:100%; height:100%; overflow:hidden; }
     #map { position:absolute; inset:0; }
     #routeCanvas { position:absolute; inset:0; pointer-events:none; z-index:50; }
@@ -25,12 +24,11 @@
   const STYLE_URL = "./style.json?v=1";
 
   // ===== Inner points (Centroids) =====
-  // 👉 Ersetze die URLs durch deine RAW GitHub Links (wie in style.json sources)
   const EU_POINTS_URL = "./europe_inner_points.json";
   const DE_POINTS_URL = "./germany_inner_points.json";
 
-  let euInnerPointByIsoA2 = {};        // { "DE": [lng, lat], ... }
-  let deInnerPointByIso3166_2 = {};    // { "DE-BW": [lng, lat], ... }
+  let euInnerPointByIsoA2 = {};
+  let deInnerPointByIso3166_2 = {};
 
   async function loadInnerPoints() {
     try {
@@ -46,36 +44,42 @@
       });
     } catch (err) {
       console.warn("⚠️ Failed to load inner points JSON:", err);
-      // Falls GitHub blockt / URL falsch: dann fällt es später automatisch auf e.lngLat zurück
     }
   }
 
-    function indexPoints(geojson, keyProps) {
-      const out = {};
-      if (!geojson || !Array.isArray(geojson.features)) return out;
-    
-      for (const f of geojson.features) {
-        const props = f?.properties || {};
-        let key = "";
-    
-        for (const kp of keyProps) {
-          const v = String(props?.[kp] ?? "").trim();
-          if (v && v !== "-99") { key = v; break; }
-        }
-    
-        const coords = f?.geometry?.coordinates;
-        if (!key || !coords || coords.length < 2) continue;
-        out[key] = coords; // [lng, lat]
+  function indexPoints(geojson, keyProps) {
+    const out = {};
+    if (!geojson || !Array.isArray(geojson.features)) return out;
+
+    for (const f of geojson.features) {
+      const props = f?.properties || {};
+      let key = "";
+
+      for (const kp of keyProps) {
+        const v = String(props?.[kp] ?? "").trim();
+        if (v && v !== "-99") { key = v; break; }
       }
-      return out;
+
+      const coords = f?.geometry?.coordinates;
+      if (!key || !coords || coords.length < 2) continue;
+      out[key] = coords;
     }
+    return out;
+  }
+
+  function pickCountryId(props) {
+    const iso2 = String(props?.ISO_A2 || props?.iso_a2 || "").trim();
+    const a3   = String(props?.ADM0_A3 || props?.adm0_a3 || "").trim();
+    if (a3) return a3;
+    if (iso2 && iso2 !== "-99") return iso2;
+    return "";
+  }
 
   function getInnerPointForArea(level, props, fallbackLngLat) {
-    // fallbackLngLat = e.lngLat
     const fallback = [fallbackLngLat.lng, fallbackLngLat.lat];
 
     if (level === "europe") {
-      const key = pickCountryId(props); // liefert ADM0_A3 bevorzugt
+      const key = pickCountryId(props);
       return (key && euInnerPointByIsoA2[key]) || fallback;
     }
 
@@ -86,698 +90,601 @@
 
     return fallback;
   }
-    function pickCountryId(props) {
-    // ISO_A2 ist manchmal "-99" (z.B. France in deinem Datensatz)
-    const iso2 = String(props?.ISO_A2 || props?.iso_a2 || "").trim();
-    const a3   = String(props?.ADM0_A3 || props?.adm0_a3 || "").trim();
-  
-    // Wenn ISO_A2 gültig ist, kannst du es nutzen – aber A3 ist weltweit stabiler.
-    // Wir nehmen A3 bevorzugt, weil du weltweit skalieren willst.
-    if (a3) return a3;
-  
-    // Fallback: nur wenn A3 fehlt
-    if (iso2 && iso2 !== "-99") return iso2;
-  
-    return "";
+
+  let currentLevel = "europe";
+  let tripMode = "sequence"; // placeholder
+  let selected = { start: null, stops: [], end: null };
+  let lastRouteStops = [];
+
+  // Hover/Selected state
+  let hoveredIdEU = null;
+  let hoveredIdDE = null;
+  let selectedIdEU = null;
+  let selectedIdDE = null;
+
+  let hoveredCityIdDE = null;
+  let selectedCityIdDE = null;
+
+  const map = new maplibregl.Map({
+    container: "map",
+    style: STYLE_URL,
+    center: [12, 52],
+    zoom: 3.5,
+    attributionControl: false
+  });
+
+  // ===== Canvas setup =====
+  const canvas = document.getElementById("routeCanvas");
+  const ctx = canvas.getContext("2d");
+
+  function resizeCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = map.getContainer().getBoundingClientRect();
+
+    canvas.style.width = rect.width + "px";
+    canvas.style.height = rect.height + "px";
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
-    let currentLevel = "europe";
-    let selected = { start: null, stops: [], end: null };
-    let lastRouteStops = [];
+  function clearCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
 
-    // Hover/Selected state (separat pro Level!)
-    let hoveredIdEU = null;
-    let hoveredIdDE = null;
-    let selectedIdEU = null;
-    let selectedIdDE = null;
+  function redrawAll() {
+    resizeCanvas();
+    drawRouteArrows();
+  }
 
-    // City hover/selected (nur DE)
-    let hoveredCityIdDE = null;
-    let selectedCityIdDE = null;
+  window.addEventListener("resize", redrawAll);
+  map.on("resize", redrawAll);
 
-    const map = new maplibregl.Map({
-      container: "map",
-      style: STYLE_URL,
-      center: [12, 52],
-      zoom: 3.5,
-      attributionControl: false
+  function drawPlayfulArrow(ax, ay, bx, by, fillColor) {
+    const dx = bx - ax, dy = by - ay;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 10) return;
+
+    const shaftW = Math.max(6, Math.min(14, dist * 0.05));
+    const headL  = Math.max(18, Math.min(44, dist * 0.18));
+    const headW  = shaftW * 2.4;
+
+    const ux = dx / dist, uy = dy / dist;
+    const px = -uy, py = ux;
+
+    const endBack = 22;
+    const startFwd = 22;
+
+    const ex = bx - ux * endBack;
+    const ey = by - uy * endBack;
+    const sx = ax + ux * startFwd;
+    const sy = ay + uy * startFwd;
+
+    const hx = ex - ux * headL;
+    const hy = ey - uy * headL;
+
+    const sL = { x: sx + px * (shaftW/2), y: sy + py * (shaftW/2) };
+    const sR = { x: sx - px * (shaftW/2), y: sy - py * (shaftW/2) };
+    const hL = { x: hx + px * (shaftW/2), y: hy + py * (shaftW/2) };
+    const hR = { x: hx - px * (shaftW/2), y: hy - py * (shaftW/2) };
+
+    const kL = { x: hx + px * (headW/2), y: hy + py * (headW/2) };
+    const kR = { x: hx - px * (headW/2), y: hy - py * (headW/2) };
+
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,0.18)";
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetX = 1;
+    ctx.shadowOffsetY = 2;
+
+    ctx.fillStyle = fillColor || "#39c35a";
+    ctx.strokeStyle = "#0b2220";
+    ctx.lineWidth = 2;
+
+    ctx.beginPath();
+    ctx.moveTo(sL.x, sL.y);
+    ctx.lineTo(hL.x, hL.y);
+    ctx.lineTo(kL.x, kL.y);
+    ctx.lineTo(ex, ey);
+    ctx.lineTo(kR.x, kR.y);
+    ctx.lineTo(hR.x, hR.y);
+    ctx.lineTo(sR.x, sR.y);
+    ctx.closePath();
+
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawRouteArrows() {
+    clearCanvas();
+    if (!Array.isArray(lastRouteStops) || lastRouteStops.length < 2) return;
+
+    for (let i = 0; i < lastRouteStops.length - 1; i++) {
+      const a = lastRouteStops[i];
+      const b = lastRouteStops[i + 1];
+      if (!a || !b) continue;
+
+      const pA = map.project([a.lng, a.lat]);
+      const pB = map.project([b.lng, b.lat]);
+
+      const color = (i === 0) ? "#39c35a" : "#f2c94c";
+      drawPlayfulArrow(pA.x, pA.y, pB.x, pB.y, color);
+    }
+  }
+
+  map.on("move", drawRouteArrows);
+  map.on("zoom", drawRouteArrows);
+
+  function safeSetVisibility(id, visible) {
+    try {
+      if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
+    } catch (e) {}
+  }
+
+  function setLevel(level) {
+    currentLevel = level;
+
+    const showEurope = level === "europe";
+    const showGermany = level === "germany";
+
+    safeSetVisibility("eu-countries-fill", showEurope);
+    safeSetVisibility("eu-countries-line", showEurope);
+    safeSetVisibility("eu-country-labels", showEurope);
+
+    safeSetVisibility("de-states-fill", showGermany);
+    safeSetVisibility("de-states-line", showGermany);
+    safeSetVisibility("de-state-labels", showGermany);
+
+    safeSetVisibility("de-places-hitbox", showGermany);
+    safeSetVisibility("de-places-dot", showGermany);
+    safeSetVisibility("de-place-labels", showGermany);
+
+    clearHoverEU();
+    clearHoverDE();
+    clearHoverCityDE();
+
+    if (level === "europe") map.flyTo({ center: [12, 52], zoom: 3.5, duration: 900 });
+    if (level === "germany") map.flyTo({ center: [10.5, 51.2], zoom: 5.8, duration: 900 });
+
+    setTimeout(() => redrawAll(), 120);
+  }
+
+  function clearHoverEU() {
+    if (hoveredIdEU !== null && map.getSource("eu_countries")) {
+      try { map.setFeatureState({ source: "eu_countries", id: hoveredIdEU }, { hover: false }); } catch(e){}
+    }
+    hoveredIdEU = null;
+  }
+  function clearHoverDE() {
+    if (hoveredIdDE !== null && map.getSource("de_states")) {
+      try { map.setFeatureState({ source: "de_states", id: hoveredIdDE }, { hover: false }); } catch(e){}
+    }
+    hoveredIdDE = null;
+  }
+  function clearHoverCityDE() {
+    if (hoveredCityIdDE !== null && map.getSource("de_places")) {
+      try { map.setFeatureState({ source: "de_places", id: hoveredCityIdDE }, { hover: false }); } catch(e){}
+    }
+    hoveredCityIdDE = null;
+  }
+
+  function setSelectedEU(featureId) {
+    if (!map.getSource("eu_countries")) return;
+    if (selectedIdEU !== null) {
+      try { map.setFeatureState({ source: "eu_countries", id: selectedIdEU }, { selected: false }); } catch(e){}
+    }
+    selectedIdEU = featureId;
+    if (selectedIdEU !== null) {
+      try { map.setFeatureState({ source: "eu_countries", id: selectedIdEU }, { selected: true }); } catch(e){}
+    }
+  }
+
+  function setSelectedDE(featureId) {
+    if (!map.getSource("de_states")) return;
+    if (selectedIdDE !== null) {
+      try { map.setFeatureState({ source: "de_states", id: selectedIdDE }, { selected: false }); } catch(e){}
+    }
+    selectedIdDE = featureId;
+    if (selectedIdDE !== null) {
+      try { map.setFeatureState({ source: "de_states", id: selectedIdDE }, { selected: true }); } catch(e){}
+    }
+  }
+
+  function setSelectedCityDE(cityFeatureId) {
+    if (!map.getSource("de_places")) return;
+    if (selectedCityIdDE !== null) {
+      try { map.setFeatureState({ source: "de_places", id: selectedCityIdDE }, { selected: false }); } catch(e){}
+    }
+    selectedCityIdDE = cityFeatureId;
+    if (selectedCityIdDE !== null) {
+      try { map.setFeatureState({ source: "de_places", id: selectedCityIdDE }, { selected: true }); } catch(e){}
+    }
+  }
+
+  async function addIconSafe(name, url) {
+    try {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = url;
+      await img.decode();
+      if (!map.hasImage(name)) map.addImage(name, img);
+    } catch (e) {
+      console.warn("Icon load fail", name, url, e);
+    }
+  }
+
+  // ===== Search Selection buffer + setters =====
+  let pendingSearchSelection = null;
+
+  function setSearchSelectionOnMap(lng, lat, name) {
+    const src = map.getSource("search_selection");
+    if (!src) {
+      pendingSearchSelection = { lng, lat, name };
+      return;
+    }
+
+    src.setData({
+      type: "FeatureCollection",
+      features: [{
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [lng, lat] },
+        properties: { name: String(name || "") }
+      }]
+    });
+  }
+
+  function clearSearchSelectionOnMap() {
+    const src = map.getSource("search_selection");
+    if (!src) {
+      pendingSearchSelection = null;
+      return;
+    }
+    src.setData({ type: "FeatureCollection", features: [] });
+  }
+
+  function updateFlagsGeojson() {
+    const feats = [];
+
+    if (selected.start && isFinite(selected.start.lng) && isFinite(selected.start.lat)) {
+      feats.push({ type:"Feature", geometry:{ type:"Point", coordinates:[selected.start.lng, selected.start.lat] }, properties:{ role:"start" } });
+    }
+    for (const s of (selected.stops || [])) {
+      if (!s || !isFinite(s.lng) || !isFinite(s.lat)) continue;
+      feats.push({ type:"Feature", geometry:{ type:"Point", coordinates:[s.lng, s.lat] }, properties:{ role:"stop" } });
+    }
+    if (selected.end && isFinite(selected.end.lng) && isFinite(selected.end.lat)) {
+      feats.push({ type:"Feature", geometry:{ type:"Point", coordinates:[selected.end.lng, selected.end.lat] }, properties:{ role:"end" } });
+    }
+
+    const src = map.getSource("flags");
+    if (src) src.setData({ type:"FeatureCollection", features:feats });
+  }
+
+  // ===== EXPLORE FILL STATES (Must/Never) =====
+  // Reset-fähig, damit Trip-Wechsel nicht “alte” Färbungen behält.
+  const exploreApplied = {
+    europe: new Set(),
+    germany: new Set()
+  };
+
+  function applyExploreStates(level, mustIds, neverIds) {
+    const lvl = (level === "germany") ? "germany" : "europe";
+    const srcName = (lvl === "germany") ? "de_states" : "eu_countries";
+
+    // 1) Reset previously applied explore states
+    for (const id of exploreApplied[lvl]) {
+      try { map.setFeatureState({ source: srcName, id: String(id) }, { explore: null }); } catch(e){}
+    }
+    exploreApplied[lvl].clear();
+
+    // 2) Apply new ones
+    (mustIds || []).forEach(id => {
+      const sid = String(id);
+      exploreApplied[lvl].add(sid);
+      try { map.setFeatureState({ source: srcName, id: sid }, { explore: "must" }); } catch(e){}
     });
 
-    // ===== Canvas setup =====
-    const canvas = document.getElementById("routeCanvas");
-    const ctx = canvas.getContext("2d");
+    (neverIds || []).forEach(id => {
+      const sid = String(id);
+      exploreApplied[lvl].add(sid);
+      try { map.setFeatureState({ source: srcName, id: sid }, { explore: "never" }); } catch(e){}
+    });
+  }
 
-    function resizeCanvas() {
-      const dpr = window.devicePixelRatio || 1;
+  // ===== Hover =====
+  map.on("mousemove", (e) => {
+    if (currentLevel === "germany" && map.getLayer("de-places-hitbox")) {
+      const cityHits = map.queryRenderedFeatures(e.point, { layers: ["de-places-hitbox"] });
+      if (cityHits.length) {
+        const c = cityHits[0];
+        const cid = (c.id !== undefined && c.id !== null) ? c.id : null;
 
-      // ✅ wichtig: Größe vom Map-Container nehmen
-      const rect = map.getContainer().getBoundingClientRect();
-
-      canvas.style.width = rect.width + "px";
-      canvas.style.height = rect.height + "px";
-      canvas.width = Math.round(rect.width * dpr);
-      canvas.height = Math.round(rect.height * dpr);
-
-      // draw in CSS pixels
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    }
-
-    function clearCanvas() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
-
-    function redrawAll() {
-      resizeCanvas();
-      drawRouteArrows();
-    }
-
-    window.addEventListener("resize", redrawAll);
-    map.on("resize", redrawAll);
-
-    // ===== Playful arrow =====
-    function drawPlayfulArrow(ax, ay, bx, by, fillColor) {
-      const dx = bx - ax, dy = by - ay;
-      const dist = Math.hypot(dx, dy);
-      if (dist < 10) return;
-
-      const shaftW = Math.max(6, Math.min(14, dist * 0.05));
-      const headL  = Math.max(18, Math.min(44, dist * 0.18));
-      const headW  = shaftW * 2.4;
-
-      const ux = dx / dist, uy = dy / dist;
-      const px = -uy, py = ux;
-
-      const endBack = 22;
-      const startFwd = 22;
-
-      const ex = bx - ux * endBack;
-      const ey = by - uy * endBack;
-      const sx = ax + ux * startFwd;
-      const sy = ay + uy * startFwd;
-
-      const hx = ex - ux * headL;
-      const hy = ey - uy * headL;
-
-      const sL = { x: sx + px * (shaftW/2), y: sy + py * (shaftW/2) };
-      const sR = { x: sx - px * (shaftW/2), y: sy - py * (shaftW/2) };
-      const hL = { x: hx + px * (shaftW/2), y: hy + py * (shaftW/2) };
-      const hR = { x: hx - px * (shaftW/2), y: hy - py * (shaftW/2) };
-
-      const kL = { x: hx + px * (headW/2), y: hy + py * (headW/2) };
-      const kR = { x: hx - px * (headW/2), y: hy - py * (headW/2) };
-
-      ctx.save();
-      ctx.shadowColor = "rgba(0,0,0,0.18)";
-      ctx.shadowBlur = 6;
-      ctx.shadowOffsetX = 1;
-      ctx.shadowOffsetY = 2;
-
-      ctx.fillStyle = fillColor || "#39c35a";
-      ctx.strokeStyle = "#0b2220";
-      ctx.lineWidth = 2;
-
-      ctx.beginPath();
-      ctx.moveTo(sL.x, sL.y);
-      ctx.lineTo(hL.x, hL.y);
-      ctx.lineTo(kL.x, kL.y);
-      ctx.lineTo(ex, ey);
-      ctx.lineTo(kR.x, kR.y);
-      ctx.lineTo(hR.x, hR.y);
-      ctx.lineTo(sR.x, sR.y);
-      ctx.closePath();
-
-      ctx.fill();
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    function drawRouteArrows() {
-      clearCanvas();
-      if (!Array.isArray(lastRouteStops) || lastRouteStops.length < 2) return;
-
-      for (let i = 0; i < lastRouteStops.length - 1; i++) {
-        const a = lastRouteStops[i];
-        const b = lastRouteStops[i + 1];
-        if (!a || !b) continue;
-
-        const pA = map.project([a.lng, a.lat]);
-        const pB = map.project([b.lng, b.lat]);
-
-        const color = (i === 0) ? "#39c35a" : "#f2c94c";
-        drawPlayfulArrow(pA.x, pA.y, pB.x, pB.y, color);
-      }
-    }
-
-    map.on("move", drawRouteArrows);
-    map.on("zoom", drawRouteArrows);
-
-    // ===== Helpers =====
-    function safeSetVisibility(id, visible) {
-      try {
-        if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
-      } catch (e) {}
-    }
-
-    function setLevel(level) {
-      currentLevel = level;
-
-      const showEurope = level === "europe";
-      const showGermany = level === "germany";
-
-      // EU
-      safeSetVisibility("eu-countries-fill", showEurope);
-      safeSetVisibility("eu-countries-line", showEurope);
-      safeSetVisibility("eu-country-labels", showEurope);
-
-      // DE
-      safeSetVisibility("de-states-fill", showGermany);
-      safeSetVisibility("de-states-line", showGermany);
-      safeSetVisibility("de-state-labels", showGermany);
-
-      // Cities: wichtig -> neue Layernamen
-      safeSetVisibility("de-places-hitbox", showGermany);
-      safeSetVisibility("de-places-dot", showGermany);
-      safeSetVisibility("de-place-labels", showGermany);
-
-      // Hover reset
-      clearHoverEU();
-      clearHoverDE();
-      clearHoverCityDE();
-
-      if (level === "europe") {
-        map.flyTo({ center: [12, 52], zoom: 3.5, duration: 900 });
-      }
-      if (level === "germany") {
-        map.flyTo({ center: [10.5, 51.2], zoom: 5.8, duration: 900 });
-      }
-
-      // ✅ nach FlyTo einmal neu anpassen (Bubble resize timing)
-      setTimeout(() => redrawAll(), 120);
-    }
-
-    // --- Hover handling: getrennt ---
-    function clearHoverEU() {
-      if (hoveredIdEU !== null && map.getSource("eu_countries")) {
-        try { map.setFeatureState({ source: "eu_countries", id: hoveredIdEU }, { hover: false }); } catch(e){}
-      }
-      hoveredIdEU = null;
-    }
-    function clearHoverDE() {
-      if (hoveredIdDE !== null && map.getSource("de_states")) {
-        try { map.setFeatureState({ source: "de_states", id: hoveredIdDE }, { hover: false }); } catch(e){}
-      }
-      hoveredIdDE = null;
-    }
-
-    // --- City hover (DE) ---
-    function clearHoverCityDE() {
-      if (hoveredCityIdDE !== null && map.getSource("de_places")) {
-        try { map.setFeatureState({ source: "de_places", id: hoveredCityIdDE }, { hover: false }); } catch(e){}
-      }
-      hoveredCityIdDE = null;
-    }
-
-    // --- Selected handling: getrennt ---
-    function setSelectedEU(featureId) {
-      if (!map.getSource("eu_countries")) return;
-      if (selectedIdEU !== null) {
-        try { map.setFeatureState({ source: "eu_countries", id: selectedIdEU }, { selected: false }); } catch(e){}
-      }
-      selectedIdEU = featureId;
-      if (selectedIdEU !== null) {
-        try { map.setFeatureState({ source: "eu_countries", id: selectedIdEU }, { selected: true }); } catch(e){}
-      }
-    }
-
-    function setSelectedDE(featureId) {
-      if (!map.getSource("de_states")) return;
-      if (selectedIdDE !== null) {
-        try { map.setFeatureState({ source: "de_states", id: selectedIdDE }, { selected: false }); } catch(e){}
-      }
-      selectedIdDE = featureId;
-      if (selectedIdDE !== null) {
-        try { map.setFeatureState({ source: "de_states", id: selectedIdDE }, { selected: true }); } catch(e){}
-      }
-    }
-
-    // --- City selected (DE) ---
-    function setSelectedCityDE(cityFeatureId) {
-      if (!map.getSource("de_places")) return;
-      if (selectedCityIdDE !== null) {
-        try { map.setFeatureState({ source: "de_places", id: selectedCityIdDE }, { selected: false }); } catch(e){}
-      }
-      selectedCityIdDE = cityFeatureId;
-      if (selectedCityIdDE !== null) {
-        try { map.setFeatureState({ source: "de_places", id: selectedCityIdDE }, { selected: true }); } catch(e){}
-      }
-    }
-
-    async function addIconSafe(name, url) {
-      try {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.src = url;
-        await img.decode();
-        if (!map.hasImage(name)) map.addImage(name, img);
-      } catch (e) {
-        console.warn("Icon load fail", name, url, e);
-      }
-    }
-    // ===== Search Selection (pending buffer) =====
-    let pendingSearchSelection = null;
-    
-    function setSearchSelectionOnMap(lng, lat, name) {
-      const src = map.getSource("search_selection");
-      if (!src) {
-        // Style/Source ist noch nicht bereit -> merken
-        pendingSearchSelection = { lng, lat, name };
-        return;
-      }
-    
-      const fc = {
-        type: "FeatureCollection",
-        features: [{
-          type: "Feature",
-          geometry: { type: "Point", coordinates: [lng, lat] },
-          properties: { name: String(name || "") }
-        }]
-      };
-    
-      src.setData(fc);
-    }
-    
-    function clearSearchSelectionOnMap() {
-      const src = map.getSource("search_selection");
-      if (!src) {
-        pendingSearchSelection = null;
-        return;
-      }
-      src.setData({ type: "FeatureCollection", features: [] });
-    }
-    function updateFlagsGeojson() {
-      const feats = [];
-
-      if (selected.start && isFinite(selected.start.lng) && isFinite(selected.start.lat)) {
-        feats.push({
-          type: "Feature",
-          geometry: { type: "Point", coordinates: [selected.start.lng, selected.start.lat] },
-          properties: { role: "start" }
-        });
-      }
-
-      for (const s of (selected.stops || [])) {
-        if (!s || !isFinite(s.lng) || !isFinite(s.lat)) continue;
-        feats.push({
-          type: "Feature",
-          geometry: { type: "Point", coordinates: [s.lng, s.lat] },
-          properties: { role: "stop" }
-        });
-      }
-
-      if (selected.end && isFinite(selected.end.lng) && isFinite(selected.end.lat)) {
-        feats.push({
-          type: "Feature",
-          geometry: { type: "Point", coordinates: [selected.end.lng, selected.end.lat] },
-          properties: { role: "end" }
-        });
-      }
-
-      const fc = { type: "FeatureCollection", features: feats };
-      const src = map.getSource("flags");
-      if (src) src.setData(fc);
-    }
-
-    // ===== Hover effect =====
-    map.on("mousemove", (e) => {
-
-      // ---- Germany: zuerst City-Hitbox testen ----
-      if (currentLevel === "germany" && map.getLayer("de-places-hitbox")) {
-        const cityHits = map.queryRenderedFeatures(e.point, { layers: ["de-places-hitbox"] });
-        if (cityHits.length) {
-          const c = cityHits[0];
-          console.log("CITY HIT:", c.id, c.properties?.id, c.properties?.name_de);
-          const cid = (c.id !== undefined && c.id !== null) ? c.id : null;
-
-          // set city hover
-          if (hoveredCityIdDE !== null && hoveredCityIdDE !== cid) {
-            try { map.setFeatureState({ source: "de_places", id: hoveredCityIdDE }, { hover: false }); } catch(e){}
-          }
-          hoveredCityIdDE = cid;
-          if (hoveredCityIdDE !== null) {
-            try { map.setFeatureState({ source: "de_places", id: hoveredCityIdDE }, { hover: true }); } catch(e){}
-          }
-
-          // optional: polygon hover aus
-          clearHoverDE();
-          return;
-        } else {
-          clearHoverCityDE();
+        if (hoveredCityIdDE !== null && hoveredCityIdDE !== cid) {
+          try { map.setFeatureState({ source: "de_places", id: hoveredCityIdDE }, { hover: false }); } catch(e){}
         }
-      }
-
-      // ---- Polygon hover (EU/DE) ----
-      const polyLayerId = (currentLevel === "germany") ? "de-states-fill" : "eu-countries-fill";
-      if (!map.getLayer(polyLayerId)) return;
-
-      const feats = map.queryRenderedFeatures(e.point, { layers: [polyLayerId] });
-      if (!feats.length) {
-        clearHoverEU();
+        hoveredCityIdDE = cid;
+        if (hoveredCityIdDE !== null) {
+          try { map.setFeatureState({ source: "de_places", id: hoveredCityIdDE }, { hover: true }); } catch(e){}
+        }
         clearHoverDE();
         return;
-      }
-
-      const f = feats[0];
-      const fid = (f.id !== undefined && f.id !== null) ? f.id : null;
-
-      if (currentLevel === "europe") {
-        if (hoveredIdEU !== null && hoveredIdEU !== fid) {
-          try { map.setFeatureState({ source: "eu_countries", id: hoveredIdEU }, { hover: false }); } catch(e){}
-        }
-        hoveredIdEU = fid;
-        if (hoveredIdEU !== null) {
-          try { map.setFeatureState({ source: "eu_countries", id: hoveredIdEU }, { hover: true }); } catch(e){}
-        }
       } else {
-        if (hoveredIdDE !== null && hoveredIdDE !== fid) {
-          try { map.setFeatureState({ source: "de_states", id: hoveredIdDE }, { hover: false }); } catch(e){}
-        }
-        hoveredIdDE = fid;
-        if (hoveredIdDE !== null) {
-          try { map.setFeatureState({ source: "de_states", id: hoveredIdDE }, { hover: true }); } catch(e){}
-        }
+        clearHoverCityDE();
       }
-    });
+    }
 
-    map.on("mouseleave", () => {
+    const polyLayerId = (currentLevel === "germany") ? "de-states-fill" : "eu-countries-fill";
+    if (!map.getLayer(polyLayerId)) return;
+
+    const feats = map.queryRenderedFeatures(e.point, { layers: [polyLayerId] });
+    if (!feats.length) {
       clearHoverEU();
       clearHoverDE();
-      clearHoverCityDE();
-    });
-    // ===== Place Popup (MapLibre) =====
-    let placePopup = null;
-    let currentSelectedPlace = null; 
-    // { id, name, kind, level, lng, lat, placeLevel }  placeLevel = country/region/city/island/airport
-    
-    function buildPlacePopupDom(place) {
-      const wrap = document.createElement("div");
-      wrap.style.minWidth = "240px";
-      wrap.style.maxWidth = "280px";
-      wrap.style.fontFamily = "system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
-    
-      // Header
-      const title = document.createElement("div");
-      title.textContent = place.name || "Auswahl";
-      title.style.fontWeight = "700";
-      title.style.fontSize = "14px";
-      title.style.marginBottom = "6px";
-      wrap.appendChild(title);
-    
-      // Image placeholder
-      const img = document.createElement("div");
-      img.style.width = "100%";
-      img.style.height = "90px";
-      img.style.borderRadius = "10px";
-      img.style.background = "#e8f0ef";
-      img.style.display = "flex";
-      img.style.alignItems = "center";
-      img.style.justifyContent = "center";
-      img.style.color = "#3A5C58";
-      img.style.fontSize = "12px";
-      img.textContent = "Bild (Placeholder)";
-      wrap.appendChild(img);
-    
-      // Nice-to-know placeholder
-      const fact = document.createElement("div");
-      fact.style.marginTop = "8px";
-      fact.style.fontSize = "12px";
-      fact.style.color = "#0b2220";
-      fact.textContent = "Nice-to-know (Placeholder) – später aus PlaceContent-Cache.";
-      wrap.appendChild(fact);
-    
-      // Button row
-      const row = document.createElement("div");
-      row.style.display = "flex";
-      row.style.gap = "6px";
-      row.style.marginTop = "10px";
-      wrap.appendChild(row);
-    
-      function mkBtn(label) {
-        const b = document.createElement("button");
-        b.textContent = label;
-        b.style.flex = "1";
-        b.style.padding = "8px 10px";
-        b.style.borderRadius = "10px";
-        b.style.border = "1px solid #0b2220";
-        b.style.background = "#ffffff";
-        b.style.cursor = "pointer";
-        b.style.fontSize = "12px";
-        return b;
-      }
-    
-      const bStart = mkBtn("Start");
-      const bStop  = mkBtn("Zwischen");
-      const bEnd   = mkBtn("Ziel");
-    
-      row.appendChild(bStart);
-      row.appendChild(bStop);
-      row.appendChild(bEnd);
-    
-      const jump = mkBtn("Level tiefer ↘︎");
-      jump.style.marginTop = "8px";
-      jump.style.width = "100%";
-      wrap.appendChild(jump);
-    
-      function sendAction(action, extra = {}) {
-        // send to Bubble
-        window.parent.postMessage({
-          type: "placeAction",
-          payload: {
-            action,                // "setRole" | "jumpDeeper"
-            ...extra,
-            id: place.id,
-            name: place.name,
-            kind: place.kind,      // "area" | "city" | "airport" | "island"
-            level: place.level,    // "europe" | "germany" | ...
-            placeLevel: place.placeLevel, // "country/region/city/island/airport"
-            lng: place.lng,
-            lat: place.lat
-          }
-        }, "*");
-      }
-    
-      bStart.onclick = () => sendAction("setRole", { role: "Start" });
-      bStop.onclick  = () => sendAction("setRole", { role: "Zwischenstopp" });
-      bEnd.onclick   = () => sendAction("setRole", { role: "Ziel" });
-    
-      jump.onclick = () => sendAction("jumpDeeper");
-    
-      return wrap;
+      return;
     }
-    
-    function openPlacePopup(place) {
-      currentSelectedPlace = place;
-    
-      const dom = buildPlacePopupDom(place);
-    
-      if (!placePopup) {
-        placePopup = new maplibregl.Popup({
-          closeButton: true,
-          closeOnClick: false,
-          offset: 18
-        });
+
+    const f = feats[0];
+    const fid = (f.id !== undefined && f.id !== null) ? f.id : null;
+
+    if (currentLevel === "europe") {
+      if (hoveredIdEU !== null && hoveredIdEU !== fid) {
+        try { map.setFeatureState({ source: "eu_countries", id: hoveredIdEU }, { hover: false }); } catch(e){}
       }
-    
-      placePopup
-        .setLngLat([place.lng, place.lat])
-        .setDOMContent(dom)
-        .addTo(map);
+      hoveredIdEU = fid;
+      if (hoveredIdEU !== null) {
+        try { map.setFeatureState({ source: "eu_countries", id: hoveredIdEU }, { hover: true }); } catch(e){}
+      }
+    } else {
+      if (hoveredIdDE !== null && hoveredIdDE !== fid) {
+        try { map.setFeatureState({ source: "de_states", id: hoveredIdDE }, { hover: false }); } catch(e){}
+      }
+      hoveredIdDE = fid;
+      if (hoveredIdDE !== null) {
+        try { map.setFeatureState({ source: "de_states", id: hoveredIdDE }, { hover: true }); } catch(e){}
+      }
     }
-    
-    function closePlacePopup() {
-      if (placePopup) placePopup.remove();
-      currentSelectedPlace = null;
-    }
-    // ===== Click -> Bubble select + highlight =====
-    map.on("click", (e) => {
-    
-      // 1) Germany: City priorisieren (Hitbox)
-      if (currentLevel === "germany" && map.getLayer("de-places-hitbox")) {
-        const cityHits = map.queryRenderedFeatures(e.point, { layers: ["de-places-hitbox"] });
-        if (cityHits.length) {
-          const c = cityHits[0];
-          const p = c.properties || {};
-          const cid = (c.id !== undefined && c.id !== null) ? c.id : null;
-    
-          if (cid !== null) setSelectedCityDE(cid);
-    
-          const name = String(p.name_de || p.NAME_DE || p.name || p.NAME || "");
-          const id = String(p.id || p.ID || name);
-              openPlacePopup({
-            id,
-            name,
-            kind: "area",
-            level: currentLevel,          // "europe" oder "germany"
-            placeLevel: (currentLevel === "europe") ? "country" : "region",
-            lng,
-            lat
-          });
-          // ✅ City bleibt erstmal Klickpunkt (wie vorher)
-          window.parent.postMessage({
-            type: "select",
-            payload: { id, name, kind: "city", level: currentLevel, lng: e.lngLat.lng, lat: e.lngLat.lat }
-          }, "*");
-    
-          return;
-        }
-      }
-    
-      // 2) Polygon click (EU/DE)
-      const polyLayers = (currentLevel === "germany")
-        ? ["de-states-fill"]
-        : ["eu-countries-fill"];
-    
-      if (!polyLayers.every(id => map.getLayer(id))) return;
-    
-      const feats = map.queryRenderedFeatures(e.point, { layers: polyLayers });
-      if (!feats.length) return;
-    
-      const f = feats[0];
-      const p = f.properties || {};
-      if (currentLevel === "europe") {
-        console.log("EU props debug:", {
-          NAME: p.NAME,
-          NAME_EN: p.NAME_EN,
-          NAME_DE: p.NAME_DE,
-          ISO_A2: p.ISO_A2,
-          iso_a2: p.iso_a2,
-          ADM0_A3: p.ADM0_A3,
-          id: f.id
-        });
-      }
-      const fid = (f.id !== undefined && f.id !== null) ? f.id : null;
-    
-      if (currentLevel === "germany") {
-        console.log("DE polygon click:", "feature.id=", f.id, "iso_3166_2=", (p.iso_3166_2 || p.ISO_3166_2 || null));
-      }
-    
-      if (fid !== null) {
-        if (currentLevel === "europe") setSelectedEU(fid);
-        if (currentLevel === "germany") setSelectedDE(fid);
-      }
-    
-      const name =
-        currentLevel === "germany"
-          ? String(p.NAME_1 || p.NAME_DE || p.NAME || p.name_de || p.name || "")
-          : String(p.NAME_DE || p.NAME || p.name_de || p.name || "");
-    
-      const id =
-        (currentLevel === "europe")
-          ? (pickCountryId(p) || String(name))
-          : String(p.iso_3166_2 || p.ISO_3166_2 || name);
-    
-      // ✅ HIER: Centerpoint (inner point) statt Klickpunkt
-      const [centerLng, centerLat] = getInnerPointForArea(currentLevel, p, e.lngLat);
-    
-      // ✅ Debug Log: siehst du in der Konsole
-      console.log("➡️ POSTMESSAGE select(area):", {
-        level: currentLevel,
-        id,
-        name,
-        click: [e.lngLat.lng, e.lngLat.lat],
-        sent: [centerLng, centerLat],
-        usedInnerPoint: (centerLng !== e.lngLat.lng || centerLat !== e.lngLat.lat)
+  });
+
+  map.on("mouseleave", () => {
+    clearHoverEU();
+    clearHoverDE();
+    clearHoverCityDE();
+  });
+
+  // ===== Popup (bleibt drin, Layout später) =====
+  let placePopup = null;
+
+  function buildPlacePopupDom(place) {
+    place = place || {};
+    place.id = String(place.id || "");
+    place.name = String(place.name || "Auswahl");
+    place.kind = String(place.kind || "");
+    place.level = String(place.level || "");
+    place.placeLevel = String(place.placeLevel || "");
+
+    const wrap = document.createElement("div");
+    wrap.style.minWidth = "240px";
+    wrap.style.maxWidth = "280px";
+    wrap.style.fontFamily = "system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
+
+    const title = document.createElement("div");
+    title.textContent = place.name;
+    title.style.fontWeight = "700";
+    title.style.fontSize = "14px";
+    title.style.marginBottom = "6px";
+    wrap.appendChild(title);
+
+    const fact = document.createElement("div");
+    fact.style.marginTop = "8px";
+    fact.style.fontSize = "12px";
+    fact.style.color = "#0b2220";
+    fact.textContent = "Popup (Placeholder) – Layout später.";
+    wrap.appendChild(fact);
+
+    return wrap;
+  }
+
+  function openPlacePopup(place) {
+    place = place || {};
+    place.lng = Number(place.lng);
+    place.lat = Number(place.lat);
+    if (!Number.isFinite(place.lng) || !Number.isFinite(place.lat)) return;
+
+    const dom = buildPlacePopupDom(place);
+
+    if (!placePopup) {
+      placePopup = new maplibregl.Popup({
+        closeButton: true,
+        closeOnClick: false,
+        offset: 18
       });
-    
-      window.parent.postMessage({
-        type: "select",
-        payload: { id, name, kind: "area", level: currentLevel, lng: centerLng, lat: centerLat }
-      }, "*");
-    });
+    }
 
-    // ===== Bubble -> Map messages =====
-    window.addEventListener("message", (ev) => {
-      const msg = ev.data;
-      if (!msg || typeof msg !== "object") return;
+    placePopup
+      .setLngLat([place.lng, place.lat])
+      .setDOMContent(dom)
+      .addTo(map);
+  }
 
-      if (msg.type === "setLevel") setLevel(msg.level);
+  function closePlacePopup() {
+    if (placePopup) placePopup.remove();
+  }
 
-      if (msg.type === "flyTo") {
-        if (Number.isFinite(msg.lng) && Number.isFinite(msg.lat)) {
-          map.flyTo({
-            center: [msg.lng, msg.lat],
-            zoom: msg.zoom || (currentLevel === "germany" ? 6.5 : 4.5),
-            duration: 900
-          });
-          setTimeout(() => redrawAll(), 120);
+  // ===== Click -> Bubble select + highlight + Popup =====
+  map.on("click", (e) => {
+
+    // 1) Germany: City priorisieren (Hitbox)
+    if (currentLevel === "germany" && map.getLayer("de-places-hitbox")) {
+      const cityHits = map.queryRenderedFeatures(e.point, { layers: ["de-places-hitbox"] });
+      if (cityHits.length) {
+        const c = cityHits[0];
+        const p = c.properties || {};
+        const cid = (c.id !== undefined && c.id !== null) ? c.id : null;
+
+        if (cid !== null) setSelectedCityDE(cid);
+
+        const name = String(p.name_de || p.NAME_DE || p.name || p.NAME || "");
+        const id = String(p.id || p.ID || name);
+
+        let lng = e.lngLat.lng;
+        let lat = e.lngLat.lat;
+        if (c.geometry && c.geometry.type === "Point" && Array.isArray(c.geometry.coordinates)) {
+          lng = c.geometry.coordinates[0];
+          lat = c.geometry.coordinates[1];
         }
-      }
 
-      if (msg.type === "setSelected") {
-        selected = msg.selected || { start: null, stops: [], end: null };
-        updateFlagsGeojson();
-      }
-
-      if (msg.type === "setRoute") {
-        lastRouteStops = (msg.stops || [])
-          .filter(p => p && Number.isFinite(p.lng) && Number.isFinite(p.lat));
-        // ✅ ganz wichtig gegen “oben links”
-        redrawAll();
-      }
-            // ===== Search selection messages =====
-      if (msg.type === "showSearchSelection") {
-        const p = msg.payload || {};
-        if (!Number.isFinite(p.lng) || !Number.isFinite(p.lat)) return;
-      
-        // Pin setzen (das hast du schon über search_selection source)
-      
-        // Popup öffnen (kind/level/placeLevel können wir fürs MVP grob setzen)
         openPlacePopup({
-          id: String(p.id || ""),              // optional, wenn du es mitschickst
-          name: String(p.name || ""),
-          kind: String(p.kind || "place"),     // optional, wenn du es mitschickst
-          level: currentLevel,
-          placeLevel: String(p.placeLevel || "city"),
-          lng: p.lng,
-          lat: p.lat
+          id, name, kind: "city", level: currentLevel, placeLevel: "city", lng, lat
         });
+
+        window.parent.postMessage({
+          type: "select",
+          payload: { id, name, kind: "city", level: currentLevel, lng, lat }
+        }, "*");
+
+        return;
       }
-      
-      if (msg.type === "clearSearchSelection") {
-        // Pin löschen (hast du)
-        closePlacePopup();
-      }
+    }
+
+    // 2) Polygon click (EU/DE)
+    const polyLayers = (currentLevel === "germany")
+      ? ["de-states-fill"]
+      : ["eu-countries-fill"];
+
+    if (!polyLayers.every(id => map.getLayer(id))) return;
+
+    const feats = map.queryRenderedFeatures(e.point, { layers: polyLayers });
+    if (!feats.length) return;
+
+    const f = feats[0];
+    const p = f.properties || {};
+    const fid = (f.id !== undefined && f.id !== null) ? f.id : null;
+
+    if (fid !== null) {
+      if (currentLevel === "europe") setSelectedEU(fid);
+      if (currentLevel === "germany") setSelectedDE(fid);
+    }
+
+    const name =
+      currentLevel === "germany"
+        ? String(p.NAME_1 || p.NAME_DE || p.NAME || p.name_de || p.name || "")
+        : String(p.NAME_DE || p.NAME || p.name_de || p.name || "");
+
+    const id =
+      (currentLevel === "europe")
+        ? (pickCountryId(p) || String(name))
+        : String(p.iso_3166_2 || p.ISO_3166_2 || name);
+
+    const [centerLng, centerLat] = getInnerPointForArea(currentLevel, p, e.lngLat);
+
+    openPlacePopup({
+      id,
+      name,
+      kind: "area",
+      level: currentLevel,
+      placeLevel: (currentLevel === "europe") ? "country" : "region",
+      lng: centerLng,
+      lat: centerLat
     });
 
-    map.on("load", async () => {
-      redrawAll();
-      await loadInnerPoints();
-      await addIconSafe("flag-start", "./flag_start.png");
-      await addIconSafe("flag-stop", "./flag_stop.png");
-      await addIconSafe("flag-end", "./flag_end.png");
-      await addIconSafe("search-flag", "./search_flag.png");
-      
-      setLevel(currentLevel);
+    window.parent.postMessage({
+      type: "select",
+      payload: { id, name, kind: "area", level: currentLevel, lng: centerLng, lat: centerLat }
+    }, "*");
+  });
+
+  // ===== Bubble -> Map messages =====
+  window.addEventListener("message", (ev) => {
+    const msg = ev.data;
+    if (!msg || typeof msg !== "object") return;
+
+    if (msg.type === "setLevel") setLevel(msg.level);
+
+    if (msg.type === "setMode") {
+      if (msg.mode === "sequence" || msg.mode === "explore") tripMode = msg.mode;
+    }
+
+    if (msg.type === "flyTo") {
+      if (Number.isFinite(msg.lng) && Number.isFinite(msg.lat)) {
+        map.flyTo({
+          center: [msg.lng, msg.lat],
+          zoom: msg.zoom || (currentLevel === "germany" ? 6.5 : 4.5),
+          duration: 900
+        });
+        setTimeout(() => redrawAll(), 120);
+      }
+    }
+
+    if (msg.type === "setSelected") {
+      selected = msg.selected || { start: null, stops: [], end: null };
       updateFlagsGeojson();
-      drawRouteArrows();
+    }
 
-      // Bubble/iFrame Layout kann noch nachziehen
-      setTimeout(() => redrawAll(), 250);
-      // ===== Apply pending search selection after load =====
-      if (pendingSearchSelection) {
-        const p = pendingSearchSelection;
-        pendingSearchSelection = null;
-        setSearchSelectionOnMap(p.lng, p.lat, p.name);
-      }
-    });
+    if (msg.type === "setRoute") {
+      lastRouteStops = (msg.stops || [])
+        .filter(p => p && Number.isFinite(p.lng) && Number.isFinite(p.lat));
+      redrawAll();
+    }
 
-    // Bubble/Wrapper Resize-Kick
-    window.addEventListener("message", (ev) => {
-      if (ev.data && ev.data.type === "forceResize") {
-        try { map.resize(); } catch(e) {}
-        try { redrawAll(); } catch(e) {}
-      }
-    });
-  </script>
+    if (msg.type === "showSearchSelection") {
+      const p = msg.payload || {};
+      if (!Number.isFinite(p.lng) || !Number.isFinite(p.lat)) return;
+      setSearchSelectionOnMap(p.lng, p.lat, p.name);
+      openPlacePopup({
+        id: String(p.id || ""),
+        name: String(p.name || ""),
+        kind: String(p.kind || "place"),
+        level: currentLevel,
+        placeLevel: String(p.placeLevel || "city"),
+        lng: p.lng,
+        lat: p.lat
+      });
+    }
+
+    if (msg.type === "clearSearchSelection") {
+      clearSearchSelectionOnMap();
+      closePlacePopup();
+    }
+
+    // ✅ Explore fills: Bubble sends must/never lists for the current map level
+    if (msg.type === "setExploreStates") {
+      // msg.level: "europe" | "germany"
+      // msg.must:  ["POL","FRA"] or ["DE-NW"]
+      // msg.never: ["ESP"] or ["DE-BY"]
+      applyExploreStates(msg.level || currentLevel, msg.must || [], msg.never || []);
+    }
+  });
+
+  map.on("load", async () => {
+    redrawAll();
+    await loadInnerPoints();
+
+    await addIconSafe("flag-start", "./flag_start.png");
+    await addIconSafe("flag-stop", "./flag_stop.png");
+    await addIconSafe("flag-end", "./flag_end.png");
+    await addIconSafe("search-flag", "./search_flag.png");
+
+    setLevel(currentLevel);
+    updateFlagsGeojson();
+    drawRouteArrows();
+
+    setTimeout(() => redrawAll(), 250);
+
+    if (pendingSearchSelection) {
+      const p = pendingSearchSelection;
+      pendingSearchSelection = null;
+      setSearchSelectionOnMap(p.lng, p.lat, p.name);
+    }
+  });
+
+  window.addEventListener("message", (ev) => {
+    if (ev.data && ev.data.type === "forceResize") {
+      try { map.resize(); } catch(e) {}
+      try { redrawAll(); } catch(e) {}
+    }
+  });
+</script>
 </body>
 </html>
 
