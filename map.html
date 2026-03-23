@@ -11,6 +11,43 @@
     #wrap { position:relative; width:100%; height:100%; overflow:hidden; }
     #map { position:absolute; inset:0; }
     #routeCanvas { position:absolute; inset:0; pointer-events:none; z-index:50; }
+        .maplibregl-popup-content{
+      border-radius: 14px;
+      padding: 12px 12px;
+      box-shadow: 0 12px 30px rgba(0,0,0,.18);
+    }
+    .maplibregl-popup-close-button{
+      font-size: 18px;
+      padding: 6px 10px;
+    }
+    .w2g-popup-title{
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 6px;
+    }
+    .w2g-popup-fact{
+      margin-top: 8px;
+      font-size: 12px;
+      color: #0b2220;
+    }
+    .w2g-popup-row{
+      display:flex;
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .w2g-btn{
+      flex:1;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid #0b2220;
+      background: #ffffff;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .w2g-btn-wide{
+      width:100%;
+      margin-top: 8px;
+    }
   </style>
 </head>
 
@@ -453,8 +490,8 @@
   });
 
   // ===== Popup (bleibt drin, Layout später) =====
-  let placePopup = null;
-
+    let placePopup = null;
+  
   function buildPlacePopupDom(place) {
     place = place || {};
     place.id = String(place.id || "");
@@ -462,26 +499,64 @@
     place.kind = String(place.kind || "");
     place.level = String(place.level || "");
     place.placeLevel = String(place.placeLevel || "");
-
+  
     const wrap = document.createElement("div");
-    wrap.style.minWidth = "240px";
-    wrap.style.maxWidth = "280px";
-    wrap.style.fontFamily = "system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
-
+  
     const title = document.createElement("div");
+    title.className = "w2g-popup-title";
     title.textContent = place.name;
-    title.style.fontWeight = "700";
-    title.style.fontSize = "14px";
-    title.style.marginBottom = "6px";
     wrap.appendChild(title);
-
+  
     const fact = document.createElement("div");
-    fact.style.marginTop = "8px";
-    fact.style.fontSize = "12px";
-    fact.style.color = "#0b2220";
-    fact.textContent = "Popup (Placeholder) – Layout später.";
+    fact.className = "w2g-popup-fact";
+    fact.textContent = "Nice-to-know (Placeholder) – später aus PlaceContent-Cache.";
     wrap.appendChild(fact);
-
+  
+    const row = document.createElement("div");
+    row.className = "w2g-popup-row";
+    wrap.appendChild(row);
+  
+    function mkBtn(label, wide=false) {
+      const b = document.createElement("button");
+      b.className = wide ? "w2g-btn w2g-btn-wide" : "w2g-btn";
+      b.textContent = label;
+      return b;
+    }
+  
+    // Sequence Buttons (wie Sidebar)
+    const bStart = mkBtn("Start");
+    const bStop  = mkBtn("Zwischen");
+    const bEnd   = mkBtn("Ziel");
+    row.appendChild(bStart);
+    row.appendChild(bStop);
+    row.appendChild(bEnd);
+  
+    // Placeholder Jump
+    const jump = mkBtn("Level tiefer ↘︎", true);
+    wrap.appendChild(jump);
+  
+    function sendAction(action, extra = {}) {
+      window.parent.postMessage({
+        type: "placeAction",
+        payload: {
+          action, // "setRole" | "jumpDeeper"
+          ...extra,
+          id: place.id,
+          name: place.name,
+          kind: place.kind,
+          level: place.level,
+          placeLevel: place.placeLevel,
+          lng: place.lng,
+          lat: place.lat
+        }
+      }, "*");
+    }
+  
+    bStart.onclick = () => sendAction("setRole", { role: "Start" });
+    bStop.onclick  = () => sendAction("setRole", { role: "Zwischenstopp" });
+    bEnd.onclick   = () => sendAction("setRole", { role: "Ziel" });
+    jump.onclick   = () => sendAction("jumpDeeper");
+  
     return wrap;
   }
 
