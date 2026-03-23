@@ -22,26 +22,22 @@
     "eu_countries": {
       "type": "geojson",
       "data": "./europe_detailed.json",
-      "promoteId": "ISO_A2"
+      "promoteId": "ADM0_A3"
     },
-
     "de_states": {
       "type": "geojson",
       "data": "./germany_detailed.json",
       "promoteId": "iso_3166_2"
     },
-
     "de_state_points": {
       "type": "geojson",
       "data": "./germany_inner_points.json"
     },
-
     "de_places": {
       "type": "geojson",
       "data": "./de_places.json",
       "promoteId": "id"
     },
-
     "flags": {
       "type": "geojson",
       "data": { "type": "FeatureCollection", "features": [] }
@@ -73,14 +69,22 @@
       "paint": {
         "fill-color": [
           "case",
+          ["==", ["feature-state", "explore"], "must"],  "#BFEBD0",
+          ["==", ["feature-state", "explore"], "never"], "#D9D9D9",
+
           ["boolean", ["feature-state", "selected"], false], "#ffffff",
           ["boolean", ["feature-state", "hover"], false], "#ffffff",
+
           "#efe7d6"
         ],
         "fill-opacity": [
           "case",
+          ["==", ["feature-state", "explore"], "must"],  0.16,
+          ["==", ["feature-state", "explore"], "never"], 0.18,
+
           ["boolean", ["feature-state", "selected"], false], 0.22,
           ["boolean", ["feature-state", "hover"], false], 0.12,
+
           0.06
         ]
       }
@@ -124,14 +128,22 @@
       "paint": {
         "fill-color": [
           "case",
+          ["==", ["feature-state", "explore"], "must"],  "#BFEBD0",
+          ["==", ["feature-state", "explore"], "never"], "#D9D9D9",
+
           ["boolean", ["feature-state", "selected"], false], "#ffffff",
           ["boolean", ["feature-state", "hover"], false], "#ffffff",
+
           "#efe7d6"
         ],
         "fill-opacity": [
           "case",
+          ["==", ["feature-state", "explore"], "must"],  0.16,
+          ["==", ["feature-state", "explore"], "never"], 0.18,
+
           ["boolean", ["feature-state", "selected"], false], 0.22,
           ["boolean", ["feature-state", "hover"], false], 0.12,
+
           0.06
         ]
       }
@@ -146,7 +158,7 @@
         "line-width": 1
       }
     },
-      {
+    {
       "id": "de-state-labels",
       "type": "symbol",
       "source": "de_state_points",
@@ -202,7 +214,7 @@
         "circle-color": "rgba(0,0,0,0.75)"
       }
     },
-      {
+    {
       "id": "de-place-labels",
       "type": "symbol",
       "source": "de_places",
@@ -223,24 +235,25 @@
         "text-halo-width": 1.2
       }
     },
-      {
-        "id": "search-selection-icon",
-        "type": "symbol",
-        "source": "search_selection",
-        "layout": {
-          "icon-image": "search-flag",
-          "icon-size": ["interpolate", ["linear"], ["zoom"],
-            4, 0.10,
-            7, 0.12,
-            10, 0.14,
-            13, 0.16
-          ],
-          "icon-allow-overlap": true,
-          "icon-anchor": "bottom",
-          "icon-rotation-alignment": "viewport"
-        }
-      },
-       {
+
+    {
+      "id": "search-selection-icon",
+      "type": "symbol",
+      "source": "search_selection",
+      "layout": {
+        "icon-image": "search-flag",
+        "icon-size": ["interpolate", ["linear"], ["zoom"],
+          4, 0.10,
+          7, 0.12,
+          10, 0.14,
+          13, 0.16
+        ],
+        "icon-allow-overlap": true,
+        "icon-anchor": "bottom",
+        "icon-rotation-alignment": "viewport"
+      }
+    },
+    {
       "id": "search-selection-label",
       "type": "symbol",
       "source": "search_selection",
@@ -257,6 +270,7 @@
         "text-halo-width": 2
       }
     },
+
     {
       "id": "flags",
       "type": "symbol",
