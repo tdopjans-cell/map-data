@@ -11,7 +11,8 @@
     #wrap { position:relative; width:100%; height:100%; overflow:hidden; }
     #map { position:absolute; inset:0; }
     #routeCanvas { position:absolute; inset:0; pointer-events:none; z-index:50; }
-        .maplibregl-popup-content{
+
+    .maplibregl-popup-content{
       border-radius: 14px;
       padding: 12px 12px;
       box-shadow: 0 12px 30px rgba(0,0,0,.18);
@@ -107,7 +108,7 @@
   function pickCountryId(props) {
     const iso2 = String(props?.ISO_A2 || props?.iso_a2 || "").trim();
     const a3   = String(props?.ADM0_A3 || props?.adm0_a3 || "").trim();
-    if (a3) return a3;
+    if (a3) return a3;              // ADM0_A3 bevorzugt (weltweit stabil)
     if (iso2 && iso2 !== "-99") return iso2;
     return "";
   }
@@ -129,7 +130,7 @@
   }
 
   let currentLevel = "europe";
-  let tripMode = "sequence"; // placeholder
+  let tripMode = "sequence"; // "sequence" | "explore"
   let selected = { start: null, stops: [], end: null };
   let lastRouteStops = [];
 
@@ -398,8 +399,7 @@
     if (src) src.setData({ type:"FeatureCollection", features:feats });
   }
 
-  // ===== EXPLORE FILL STATES (Must/Never) =====
-  // Reset-fähig, damit Trip-Wechsel nicht “alte” Färbungen behält.
+  // ===== EXPLORE FILL STATES (Must/Never) from Bubble =====
   const exploreApplied = {
     europe: new Set(),
     germany: new Set()
@@ -409,13 +409,11 @@
     const lvl = (level === "germany") ? "germany" : "europe";
     const srcName = (lvl === "germany") ? "de_states" : "eu_countries";
 
-    // 1) Reset previously applied explore states
     for (const id of exploreApplied[lvl]) {
       try { map.setFeatureState({ source: srcName, id: String(id) }, { explore: null }); } catch(e){}
     }
     exploreApplied[lvl].clear();
 
-    // 2) Apply new ones
     (mustIds || []).forEach(id => {
       const sid = String(id);
       exploreApplied[lvl].add(sid);
@@ -427,6 +425,22 @@
       exploreApplied[lvl].add(sid);
       try { map.setFeatureState({ source: srcName, id: sid }, { explore: "never" }); } catch(e){}
     });
+  }
+
+  // ===== EXPLORE immediate feedback (local feature-state set) =====
+  function setExploreStateForCurrentLevel(placeId, state) {
+    const srcName = (currentLevel === "germany") ? "de_states" : "eu_countries";
+    const sid = String(placeId);
+
+    try {
+      if (state === "neutral") {
+        map.setFeatureState({ source: srcName, id: sid }, { explore: null });
+      } else {
+        map.setFeatureState({ source: srcName, id: sid }, { explore: state }); // "must" | "never"
+      }
+    } catch (e) {
+      console.warn("setExploreState failed", srcName, sid, state, e);
+    }
   }
 
   // ===== Hover =====
@@ -489,9 +503,9 @@
     clearHoverCityDE();
   });
 
-  // ===== Popup (bleibt drin, Layout später) =====
-    let placePopup = null;
-  
+  // ===== Popup =====
+  let placePopup = null;
+
   function buildPlacePopupDom(place) {
     place = place || {};
     place.id = String(place.id || "");
@@ -499,47 +513,37 @@
     place.kind = String(place.kind || "");
     place.level = String(place.level || "");
     place.placeLevel = String(place.placeLevel || "");
-  
+
     const wrap = document.createElement("div");
-  
+
     const title = document.createElement("div");
     title.className = "w2g-popup-title";
     title.textContent = place.name;
     wrap.appendChild(title);
-  
+
     const fact = document.createElement("div");
     fact.className = "w2g-popup-fact";
-    fact.textContent = "Nice-to-know (Placeholder) – später aus PlaceContent-Cache.";
+    fact.textContent = (tripMode === "explore")
+      ? "Explorer-Modus: priorisieren / depriorisieren (ohne Reihenfolge)."
+      : "Nice-to-know (Placeholder) – später aus PlaceContent-Cache.";
     wrap.appendChild(fact);
-  
+
     const row = document.createElement("div");
     row.className = "w2g-popup-row";
     wrap.appendChild(row);
-  
+
     function mkBtn(label, wide=false) {
       const b = document.createElement("button");
       b.className = wide ? "w2g-btn w2g-btn-wide" : "w2g-btn";
       b.textContent = label;
       return b;
     }
-  
-    // Sequence Buttons (wie Sidebar)
-    const bStart = mkBtn("Start");
-    const bStop  = mkBtn("Zwischen");
-    const bEnd   = mkBtn("Ziel");
-    row.appendChild(bStart);
-    row.appendChild(bStop);
-    row.appendChild(bEnd);
-  
-    // Placeholder Jump
-    const jump = mkBtn("Level tiefer ↘︎", true);
-    wrap.appendChild(jump);
-  
+
     function sendAction(action, extra = {}) {
       window.parent.postMessage({
         type: "placeAction",
         payload: {
-          action, // "setRole" | "jumpDeeper"
+          action,
           ...extra,
           id: place.id,
           name: place.name,
@@ -551,12 +555,50 @@
         }
       }, "*");
     }
-  
+
+    // ✅ EXPLORE UI
+    if (tripMode === "explore") {
+      // In Explore erstmal nur Flächen (area) sinnvoll
+      const bNeutral = mkBtn("Neutral");
+      const bMust = mkBtn("Muss");
+      const bNever = mkBtn("Niemals");
+
+      row.appendChild(bNeutral);
+      row.appendChild(bMust);
+      row.appendChild(bNever);
+
+      function pick(state) {
+        if (place.kind === "area") {
+          // sofortiges Feedback auf der Fläche
+          setExploreStateForCurrentLevel(place.id, state);
+        }
+        // Bubble soll speichern (TripSelection)
+        sendAction("setExplore", { state });
+      }
+
+      bNeutral.onclick = () => pick("neutral");
+      bMust.onclick = () => pick("must");
+      bNever.onclick = () => pick("never");
+
+      return wrap;
+    }
+
+    // ✅ SEQUENCE UI (wie bisher)
+    const bStart = mkBtn("Start");
+    const bStop  = mkBtn("Zwischen");
+    const bEnd   = mkBtn("Ziel");
+    row.appendChild(bStart);
+    row.appendChild(bStop);
+    row.appendChild(bEnd);
+
+    const jump = mkBtn("Level tiefer ↘︎", true);
+    wrap.appendChild(jump);
+
     bStart.onclick = () => sendAction("setRole", { role: "Start" });
     bStop.onclick  = () => sendAction("setRole", { role: "Zwischenstopp" });
     bEnd.onclick   = () => sendAction("setRole", { role: "Ziel" });
     jump.onclick   = () => sendAction("jumpDeeper");
-  
+
     return wrap;
   }
 
@@ -722,11 +764,8 @@
       closePlacePopup();
     }
 
-    // ✅ Explore fills: Bubble sends must/never lists for the current map level
+    // Explore fills from Bubble
     if (msg.type === "setExploreStates") {
-      // msg.level: "europe" | "germany"
-      // msg.must:  ["POL","FRA"] or ["DE-NW"]
-      // msg.never: ["ESP"] or ["DE-BY"]
       applyExploreStates(msg.level || currentLevel, msg.must || [], msg.never || []);
     }
   });
@@ -762,7 +801,6 @@
 </script>
 </body>
 </html>
-
 
 
 
