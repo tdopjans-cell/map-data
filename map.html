@@ -657,7 +657,7 @@
 
         window.parent.postMessage({
           type: "select",
-          payload: { id, name, kind: "city", level: currentLevel, lng, lat }
+          payload: { id, name, kind: "city", level: currentLevel, placeLevel: "city", lng, lat }
         }, "*");
 
         return;
@@ -704,10 +704,12 @@
       lng: centerLng,
       lat: centerLat
     });
-
+    
+    const placeLevel = (currentLevel === "europe") ? "country" : "region";
+    
     window.parent.postMessage({
       type: "select",
-      payload: { id, name, kind: "area", level: currentLevel, lng: centerLng, lat: centerLat }
+      payload: { id, name, kind: "area", level: currentLevel, placeLevel, lng: centerLng, lat: centerLat }
     }, "*");
   });
 
