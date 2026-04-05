@@ -249,7 +249,93 @@
         "text-halo-width": 1.2
       }
     },
-
+    {
+      "id": "cz-regions-fill",
+      "type": "fill",
+      "source": "cz_regions",
+      "layout": { "visibility": "none" },
+      "paint": {
+        "fill-color": [
+          "case",
+          ["==", ["feature-state", "explore"], "must"], "#8BE6B2",
+          ["==", ["feature-state", "explore"], "never"], "#CFCFCF",
+          ["boolean", ["feature-state", "selected"], false], "#ffffff",
+          ["boolean", ["feature-state", "hover"], false], "#ffffff",
+          "#efe7d6"
+        ],
+        "fill-opacity": [
+          "case",
+          ["==", ["feature-state", "explore"], "must"], 0.28,
+          ["==", ["feature-state", "explore"], "never"], 0.32,
+          ["boolean", ["feature-state", "selected"], false], 0.22,
+          ["boolean", ["feature-state", "hover"], false], 0.12,
+          0.06
+        ]
+      }
+    },
+    {
+      "id": "cz-regions-line",
+      "type": "line",
+      "source": "cz_regions",
+      "layout": { "visibility": "none" },
+      "paint": {
+        "line-color": "rgba(20,20,20,0.6)",
+        "line-width": 1
+      }
+    },
+    {
+      "id": "cz-region-labels",
+      "type": "symbol",
+      "source": "cz_region_points",
+      "maxzoom": 7.2,
+      "layout": {
+        "visibility": "none",
+        "symbol-placement": "point",
+        "text-field": ["coalesce", ["get", "name_de"], ["get", "name_en"], ["get", "name"], ["get", "NAME_DE"], ["get", "NAME_EN"], ["get", "NAME"]],
+        "text-font": ["Noto Sans Regular"],
+        "text-size": 12,
+        "text-anchor": "top",
+        "text-offset": [0, 0.6],
+        "text-allow-overlap": false
+      },
+      "paint": {
+        "text-color": "#111111",
+        "text-halo-color": "rgba(255,255,255,0.95)",
+        "text-halo-width": 2
+      }
+    },
+    {
+      "id": "cz-places-dot",
+      "type": "circle",
+      "source": "cz_places",
+      "minzoom": 7.3,
+      "layout": { "visibility": "none" },
+      "paint": {
+        "circle-radius": 3,
+        "circle-color": "rgba(0,0,0,0.75)"
+      }
+    },
+    {
+      "id": "cz-place-labels",
+      "type": "symbol",
+      "source": "cz_places",
+      "minzoom": 7.3,
+      "layout": {
+        "visibility": "none",
+        "text-field": ["coalesce", ["get", "name_de"], ["get", "name_en"], ["get", "name"], ["get", "NAME_DE"], ["get", "NAME_EN"], ["get", "NAME"]],
+        "text-font": ["Noto Sans Regular"],
+        "text-size": 11,
+        "text-letter-spacing": 0.03,
+        "text-allow-overlap": true,
+        "text-ignore-placement": true,
+        "text-anchor": "center"
+      },
+      "paint": {
+        "text-color": "rgba(10,10,10,0.85)",
+        "text-halo-color": "rgba(255,255,255,0.98)",
+        "text-halo-width": 1.2
+      }
+    },
     {
       "id": "search-selection-icon",
       "type": "symbol",
