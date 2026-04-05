@@ -657,22 +657,29 @@
       return wrap;
     }
 
-    // ✅ SEQUENCE UI (Buttons bleiben vorerst; später ersetzen wir "Start/Ziel" durch "Stop hinzufügen")
-    const bStart = mkBtn("Start");
-    const bStop  = mkBtn("Zwischen");
-    const bEnd   = mkBtn("Ziel");
-    row.appendChild(bStart);
-    row.appendChild(bStop);
-    row.appendChild(bEnd);
-
+    // ✅ SEQUENCE UI (final)
+    // 1) Stop setzen (öffnet Bubble-Popup zum Speichern)
+    // 2) Explore hier ★ (nur sinnvoll für Area / country/region)
+    // 3) Level tiefer ↘︎ (datengetriebener Jump in Bubble)
+    
+    const bStopSet = mkBtn("Stop setzen", true);
+    wrap.appendChild(bStopSet);
+    
+    const bExplore = mkBtn("Explore hier ★", true);
+    wrap.appendChild(bExplore);
+    
     const jump = mkBtn("Level tiefer ↘︎", true);
     wrap.appendChild(jump);
-
-    bStart.onclick = () => sendAction("setRole", { role: "Start" });
-    bStop.onclick  = () => sendAction("setRole", { role: "Zwischenstopp" });
-    bEnd.onclick   = () => sendAction("setRole", { role: "Ziel" });
-    jump.onclick   = () => sendAction("jumpDeeper");
-
+    
+    // Stop setzen: Bubble öffnet create-stop Popup (keine role mehr!)
+    bStopSet.onclick = () => sendAction("setStop");
+    
+    // Explore hier: nur für Flächen sinnvoll (country/region). Bubble entscheidet final.
+    bExplore.onclick = () => sendAction("startExplore");
+    
+    // Jump: Bubble entscheidet, welches child level existiert
+    jump.onclick = () => sendAction("jumpDeeper");
+    
     return wrap;
   }
 
