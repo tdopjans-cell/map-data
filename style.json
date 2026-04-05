@@ -38,6 +38,20 @@
       "data": "./de_places.json",
       "promoteId": "id"
     },
+    "cz_regions": {
+      "type": "geojson",
+      "data": "./czech_detailed.json",
+      "promoteId": "place_id" 
+    },
+    "cz_region_points": {
+      "type": "geojson",
+      "data": "./czech_inner_points.json"
+    },
+    "cz_places": {
+      "type": "geojson",
+      "data": "./cz_places.json",
+      "promoteId": "id"
+    },
     "flags": {
       "type": "geojson",
       "data": { "type": "FeatureCollection", "features": [] }
