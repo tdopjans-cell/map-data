@@ -64,21 +64,33 @@
   // ===== Inner points (Centroids) =====
   const EU_POINTS_URL = "./europe_inner_points.json";
   const DE_POINTS_URL = "./germany_inner_points.json";
+  const CZ_POINTS_URL = "./czech_inner_points.json";
 
   let euInnerPointByIsoA2 = {};
   let deInnerPointByIso3166_2 = {};
+  let czInnerPointByPlaceId = {};
 
   async function loadInnerPoints() {
     try {
-      const [euRes, deRes] = await Promise.all([fetch(EU_POINTS_URL), fetch(DE_POINTS_URL)]);
-      const [euJson, deJson] = await Promise.all([euRes.json(), deRes.json()]);
+      const [euRes, deRes, czRes] = await Promise.all([
+        fetch(EU_POINTS_URL),
+        fetch(DE_POINTS_URL),
+        fetch(CZ_POINTS_URL)
+      ]);
+      const [euJson, deJson, czJson] = await Promise.all([
+        euRes.json(),
+        deRes.json(),
+        czRes.json()
+      ]);
 
       euInnerPointByIsoA2 = indexPoints(euJson, ["ADM0_A3", "ISO_A2", "iso_a2"]);
       deInnerPointByIso3166_2 = indexPoints(deJson, ["iso_3166_2", "ISO_3166_2"]);
+      czInnerPointByPlaceId = indexPoints(czJson, ["place_id", "ISO_3166_2", "iso_3166_2"]);
 
       console.log("✅ Inner points loaded:", {
         eu: Object.keys(euInnerPointByIsoA2).length,
-        de: Object.keys(deInnerPointByIso3166_2).length
+        de: Object.keys(deInnerPointByIso3166_2).length,
+        cz: Object.keys(czInnerPointByPlaceId).length
       });
     } catch (err) {
       console.warn("⚠️ Failed to load inner points JSON:", err);
@@ -100,7 +112,7 @@
 
       const coords = f?.geometry?.coordinates;
       if (!key || !coords || coords.length < 2) continue;
-      out[key] = coords;
+      out[key] = coords; // [lng,lat]
     }
     return out;
   }
@@ -126,19 +138,27 @@
       return deInnerPointByIso3166_2[iso] || fallback;
     }
 
+    if (level === "czechia") {
+      const pid = String(props?.place_id || props?.PLACE_ID || props?.iso_3166_2 || props?.ISO_3166_2 || "");
+      return czInnerPointByPlaceId[pid] || fallback;
+    }
+
     return fallback;
   }
 
   let currentLevel = "europe";
-  let tripMode = "sequence"; // "sequence" | "explore"
+  let tripMode = "sequence"; // "sequence" | "explore"  (später ersetzen wir das durch Explore-Subflow pro Stop)
   let selected = { start: null, stops: [], end: null };
   let lastRouteStops = [];
 
   // Hover/Selected state
   let hoveredIdEU = null;
   let hoveredIdDE = null;
+  let hoveredIdCZ = null;
+
   let selectedIdEU = null;
   let selectedIdDE = null;
+  let selectedIdCZ = null;
 
   let hoveredCityIdDE = null;
   let selectedCityIdDE = null;
@@ -265,6 +285,7 @@
 
     const showEurope = level === "europe";
     const showGermany = level === "germany";
+    const showCzechia = level === "czechia";
 
     safeSetVisibility("eu-countries-fill", showEurope);
     safeSetVisibility("eu-countries-line", showEurope);
@@ -278,12 +299,20 @@
     safeSetVisibility("de-places-dot", showGermany);
     safeSetVisibility("de-place-labels", showGermany);
 
+    safeSetVisibility("cz-regions-fill", showCzechia);
+    safeSetVisibility("cz-regions-line", showCzechia);
+    safeSetVisibility("cz-region-labels", showCzechia);
+    safeSetVisibility("cz-places-dot", showCzechia);
+    safeSetVisibility("cz-place-labels", showCzechia);
+
     clearHoverEU();
     clearHoverDE();
+    clearHoverCZ();
     clearHoverCityDE();
 
     if (level === "europe") map.flyTo({ center: [12, 52], zoom: 3.5, duration: 900 });
     if (level === "germany") map.flyTo({ center: [10.5, 51.2], zoom: 5.8, duration: 900 });
+    if (level === "czechia") map.flyTo({ center: [15.3, 49.8], zoom: 7.0, duration: 900 });
 
     setTimeout(() => redrawAll(), 120);
   }
@@ -299,6 +328,12 @@
       try { map.setFeatureState({ source: "de_states", id: hoveredIdDE }, { hover: false }); } catch(e){}
     }
     hoveredIdDE = null;
+  }
+  function clearHoverCZ() {
+    if (hoveredIdCZ !== null && map.getSource("cz_regions")) {
+      try { map.setFeatureState({ source: "cz_regions", id: hoveredIdCZ }, { hover: false }); } catch(e){}
+    }
+    hoveredIdCZ = null;
   }
   function clearHoverCityDE() {
     if (hoveredCityIdDE !== null && map.getSource("de_places")) {
@@ -326,6 +361,17 @@
     selectedIdDE = featureId;
     if (selectedIdDE !== null) {
       try { map.setFeatureState({ source: "de_states", id: selectedIdDE }, { selected: true }); } catch(e){}
+    }
+  }
+
+  function setSelectedCZ(featureId) {
+    if (!map.getSource("cz_regions")) return;
+    if (selectedIdCZ !== null) {
+      try { map.setFeatureState({ source: "cz_regions", id: selectedIdCZ }, { selected: false }); } catch(e){}
+    }
+    selectedIdCZ = featureId;
+    if (selectedIdCZ !== null) {
+      try { map.setFeatureState({ source: "cz_regions", id: selectedIdCZ }, { selected: true }); } catch(e){}
     }
   }
 
@@ -402,12 +448,20 @@
   // ===== EXPLORE FILL STATES (Must/Never) from Bubble =====
   const exploreApplied = {
     europe: new Set(),
-    germany: new Set()
+    germany: new Set(),
+    czechia: new Set()
   };
 
   function applyExploreStates(level, mustIds, neverIds) {
-    const lvl = (level === "germany") ? "germany" : "europe";
-    const srcName = (lvl === "germany") ? "de_states" : "eu_countries";
+    const lvl =
+      (level === "germany") ? "germany" :
+      (level === "czechia") ? "czechia" :
+      "europe";
+
+    const srcName =
+      (lvl === "germany") ? "de_states" :
+      (lvl === "czechia") ? "cz_regions" :
+      "eu_countries";
 
     for (const id of exploreApplied[lvl]) {
       try { map.setFeatureState({ source: srcName, id: String(id) }, { explore: null }); } catch(e){}
@@ -429,7 +483,11 @@
 
   // ===== EXPLORE immediate feedback (local feature-state set) =====
   function setExploreStateForCurrentLevel(placeId, state) {
-    const srcName = (currentLevel === "germany") ? "de_states" : "eu_countries";
+    const srcName =
+      (currentLevel === "germany") ? "de_states" :
+      (currentLevel === "czechia") ? "cz_regions" :
+      "eu_countries";
+
     const sid = String(placeId);
 
     try {
@@ -465,13 +523,18 @@
       }
     }
 
-    const polyLayerId = (currentLevel === "germany") ? "de-states-fill" : "eu-countries-fill";
+    const polyLayerId =
+      (currentLevel === "germany") ? "de-states-fill" :
+      (currentLevel === "czechia") ? "cz-regions-fill" :
+      "eu-countries-fill";
+
     if (!map.getLayer(polyLayerId)) return;
 
     const feats = map.queryRenderedFeatures(e.point, { layers: [polyLayerId] });
     if (!feats.length) {
       clearHoverEU();
       clearHoverDE();
+      clearHoverCZ();
       return;
     }
 
@@ -486,7 +549,10 @@
       if (hoveredIdEU !== null) {
         try { map.setFeatureState({ source: "eu_countries", id: hoveredIdEU }, { hover: true }); } catch(e){}
       }
-    } else {
+      return;
+    }
+
+    if (currentLevel === "germany") {
       if (hoveredIdDE !== null && hoveredIdDE !== fid) {
         try { map.setFeatureState({ source: "de_states", id: hoveredIdDE }, { hover: false }); } catch(e){}
       }
@@ -494,12 +560,23 @@
       if (hoveredIdDE !== null) {
         try { map.setFeatureState({ source: "de_states", id: hoveredIdDE }, { hover: true }); } catch(e){}
       }
+      return;
+    }
+
+    // czechia
+    if (hoveredIdCZ !== null && hoveredIdCZ !== fid) {
+      try { map.setFeatureState({ source: "cz_regions", id: hoveredIdCZ }, { hover: false }); } catch(e){}
+    }
+    hoveredIdCZ = fid;
+    if (hoveredIdCZ !== null) {
+      try { map.setFeatureState({ source: "cz_regions", id: hoveredIdCZ }, { hover: true }); } catch(e){}
     }
   });
 
   map.on("mouseleave", () => {
     clearHoverEU();
     clearHoverDE();
+    clearHoverCZ();
     clearHoverCityDE();
   });
 
@@ -556,9 +633,8 @@
       }, "*");
     }
 
-    // ✅ EXPLORE UI
+    // ✅ EXPLORE UI (nur Priorisierung)
     if (tripMode === "explore") {
-      // In Explore erstmal nur Flächen (area) sinnvoll
       const bNeutral = mkBtn("Neutral");
       const bMust = mkBtn("Muss");
       const bNever = mkBtn("Niemals");
@@ -569,10 +645,8 @@
 
       function pick(state) {
         if (place.kind === "area") {
-          // sofortiges Feedback auf der Fläche
           setExploreStateForCurrentLevel(place.id, state);
         }
-        // Bubble soll speichern (TripSelection)
         sendAction("setExplore", { state });
       }
 
@@ -583,7 +657,7 @@
       return wrap;
     }
 
-    // ✅ SEQUENCE UI (wie bisher)
+    // ✅ SEQUENCE UI (Buttons bleiben vorerst; später ersetzen wir "Start/Ziel" durch "Stop hinzufügen")
     const bStart = mkBtn("Start");
     const bStop  = mkBtn("Zwischen");
     const bEnd   = mkBtn("Ziel");
@@ -664,10 +738,11 @@
       }
     }
 
-    // 2) Polygon click (EU/DE)
-    const polyLayers = (currentLevel === "germany")
-      ? ["de-states-fill"]
-      : ["eu-countries-fill"];
+    // 2) Polygon click (EU/DE/CZ)
+    const polyLayers =
+      (currentLevel === "germany") ? ["de-states-fill"] :
+      (currentLevel === "czechia") ? ["cz-regions-fill"] :
+      ["eu-countries-fill"];
 
     if (!polyLayers.every(id => map.getLayer(id))) return;
 
@@ -681,32 +756,41 @@
     if (fid !== null) {
       if (currentLevel === "europe") setSelectedEU(fid);
       if (currentLevel === "germany") setSelectedDE(fid);
+      if (currentLevel === "czechia") setSelectedCZ(fid);
     }
 
     const name =
-      currentLevel === "germany"
-        ? String(p.NAME_1 || p.NAME_DE || p.NAME || p.name_de || p.name || "")
-        : String(p.NAME_DE || p.NAME || p.name_de || p.name || "");
+      (currentLevel === "czechia")
+        ? String(p.name_de || p.name_en || p.name || p.NAME_DE || p.NAME_EN || p.NAME || "")
+        : (currentLevel === "germany")
+          ? String(p.NAME_1 || p.NAME_DE || p.NAME || p.name_de || p.name || "")
+          : String(p.NAME_DE || p.NAME || p.name_de || p.name || "");
 
     const id =
-      (currentLevel === "europe")
-        ? (pickCountryId(p) || String(name))
-        : String(p.iso_3166_2 || p.ISO_3166_2 || name);
+      (currentLevel === "czechia")
+        ? String(p.place_id || p.iso_3166_2 || p.ISO_3166_2 || fid || name)
+        : (currentLevel === "europe")
+          ? (pickCountryId(p) || String(name))
+          : String(p.iso_3166_2 || p.ISO_3166_2 || name);
 
     const [centerLng, centerLat] = getInnerPointForArea(currentLevel, p, e.lngLat);
+
+    const placeLevel =
+      (currentLevel === "europe") ? "country" :
+      (currentLevel === "germany") ? "region" :
+      (currentLevel === "czechia") ? "region" :
+      "region";
 
     openPlacePopup({
       id,
       name,
       kind: "area",
       level: currentLevel,
-      placeLevel: (currentLevel === "europe") ? "country" : "region",
+      placeLevel,
       lng: centerLng,
       lat: centerLat
     });
-    
-    const placeLevel = (currentLevel === "europe") ? "country" : "region";
-    
+
     window.parent.postMessage({
       type: "select",
       payload: { id, name, kind: "area", level: currentLevel, placeLevel, lng: centerLng, lat: centerLat }
@@ -728,7 +812,7 @@
       if (Number.isFinite(msg.lng) && Number.isFinite(msg.lat)) {
         map.flyTo({
           center: [msg.lng, msg.lat],
-          zoom: msg.zoom || (currentLevel === "germany" ? 6.5 : 4.5),
+          zoom: msg.zoom || (currentLevel === "germany" ? 6.5 : (currentLevel === "czechia" ? 7.0 : 4.5)),
           duration: 900
         });
         setTimeout(() => redrawAll(), 120);
