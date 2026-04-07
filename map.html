@@ -634,28 +634,43 @@
     }
 
     // ✅ EXPLORE UI (nur Priorisierung)
-    if (tripMode === "explore") {
-      const bNeutral = mkBtn("Neutral");
-      const bMust = mkBtn("Muss");
-      const bNever = mkBtn("Niemals");
-
-      row.appendChild(bNeutral);
-      row.appendChild(bMust);
-      row.appendChild(bNever);
-
-      function pick(state) {
-        if (place.kind === "area") {
-          setExploreStateForCurrentLevel(place.id, state);
+      if (tripMode === "explore") {
+        // 1) Priorisierung (für aktuell angeklickte Fläche)
+        const bNeutral = mkBtn("Neutral");
+        const bMust = mkBtn("Muss");
+        const bNever = mkBtn("Niemals");
+      
+        row.appendChild(bNeutral);
+        row.appendChild(bMust);
+        row.appendChild(bNever);
+      
+        function pick(state) {
+          if (place.kind === "area") {
+            setExploreStateForCurrentLevel(place.id, state);
+          }
+          sendAction("setExplore", { state });
         }
-        sendAction("setExplore", { state });
+      
+        bNeutral.onclick = () => pick("neutral");
+        bMust.onclick = () => pick("must");
+        bNever.onclick = () => pick("never");
+      
+        // 2) Globale Explore-Aktionen (für den gesamten Explore-Subflow)
+        const upBtn = mkBtn("Ebene höher ↖︎", true);
+        wrap.appendChild(upBtn);
+      
+        const saveBtn = mkBtn("Explore speichern ✅", true);
+        wrap.appendChild(saveBtn);
+      
+        const discardBtn = mkBtn("Explore verwerfen ✖︎", true);
+        wrap.appendChild(discardBtn);
+      
+        upBtn.onclick = () => sendAction("levelUp");
+        saveBtn.onclick = () => sendAction("saveExplore");
+        discardBtn.onclick = () => sendAction("discardExplore");
+      
+        return wrap;
       }
-
-      bNeutral.onclick = () => pick("neutral");
-      bMust.onclick = () => pick("must");
-      bNever.onclick = () => pick("never");
-
-      return wrap;
-    }
 
     // ✅ SEQUENCE UI (final)
     // 1) Stop setzen (öffnet Bubble-Popup zum Speichern)
@@ -670,6 +685,10 @@
     
     const jump = mkBtn("Level tiefer ↘︎", true);
     wrap.appendChild(jump);
+
+    const upBtn = mkBtn("Ebene höher ↖︎", true);
+    wrap.appendChild(upBtn);
+    upBtn.onclick = () => sendAction("levelUp");
     
     // Stop setzen: Bubble öffnet create-stop Popup (keine role mehr!)
     bStopSet.onclick = () => sendAction("setStop");
