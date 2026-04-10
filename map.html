@@ -317,6 +317,11 @@
     }
 
     setTimeout(() => redrawAll(), 120);
+        // ✅ Bubble immer informieren, wenn das Map-Level wirklich gewechselt hat
+      window.parent.postMessage({
+        type: "levelChanged",
+        payload: { level: currentLevel }
+      }, "*");
   }
 
   function clearHoverEU() {
