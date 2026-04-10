@@ -310,9 +310,11 @@
     clearHoverCZ();
     clearHoverCityDE();
 
-    if (level === "europe") map.flyTo({ center: [12, 52], zoom: 3.5, duration: 900 });
-    if (level === "germany") map.flyTo({ center: [10.5, 51.2], zoom: 5.8, duration: 900 });
-    if (level === "czechia") map.flyTo({ center: [15.3, 49.8], zoom: 7.0, duration: 900 });
+    if (!opts.keepView) {
+      if (level === "europe")  map.flyTo({ center: [12, 52], zoom: 3.5, duration: 900 });
+      if (level === "germany") map.flyTo({ center: [10.5, 51.2], zoom: 5.8, duration: 900 });
+      if (level === "czechia") map.flyTo({ center: [15.3, 49.8], zoom: 7.0, duration: 900 });
+    }
 
     setTimeout(() => redrawAll(), 120);
   }
@@ -828,7 +830,11 @@
     const msg = ev.data;
     if (!msg || typeof msg !== "object") return;
 
-    if (msg.type === "setLevel") setLevel(msg.level);
+    if (msg.type === "setLevel") {
+        // neu: optionales keepView
+        const keepView = !!msg.keepView;
+        setLevel(msg.level, { keepView });
+      }
 
     if (msg.type === "setMode") {
       if (msg.mode === "sequence" || msg.mode === "explore") tripMode = msg.mode;
