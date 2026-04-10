@@ -878,6 +878,12 @@
 
     // Explore fills from Bubble
     if (msg.type === "setExploreStates") {
+      console.log("📩 setExploreStates received:", {
+        level: msg.level,
+        must: msg.must,
+        never: msg.never,
+        currentLevel
+      });
       applyExploreStates(msg.level || currentLevel, msg.must || [], msg.never || []);
     }
   });
