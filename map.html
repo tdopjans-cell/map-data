@@ -280,12 +280,13 @@
     } catch (e) {}
   }
 
-  function setLevel(level) {
-    currentLevel = level;
+  function setLevel(level, opts) {
+    opts = opts || {};
+    currentLevel = String(level || "europe");
 
-    const showEurope = level === "europe";
-    const showGermany = level === "germany";
-    const showCzechia = level === "czechia";
+    const showEurope = currentLevel === "europe";
+    const showGermany = currentLevel === "germany";
+    const showCzechia = currentLevel === "czechia";
 
     safeSetVisibility("eu-countries-fill", showEurope);
     safeSetVisibility("eu-countries-line", showEurope);
@@ -311,17 +312,23 @@
     clearHoverCityDE();
 
     if (!opts.keepView) {
-      if (level === "europe")  map.flyTo({ center: [12, 52], zoom: 3.5, duration: 900 });
-      if (level === "germany") map.flyTo({ center: [10.5, 51.2], zoom: 5.8, duration: 900 });
-      if (level === "czechia") map.flyTo({ center: [15.3, 49.8], zoom: 7.0, duration: 900 });
+      if (currentLevel === "europe") {
+        map.flyTo({ center: [12, 52], zoom: 3.5, duration: 900 });
+      }
+      if (currentLevel === "germany") {
+        map.flyTo({ center: [10.5, 51.2], zoom: 5.8, duration: 900 });
+      }
+      if (currentLevel === "czechia") {
+        map.flyTo({ center: [15.3, 49.8], zoom: 7.0, duration: 900 });
+      }
     }
 
     setTimeout(() => redrawAll(), 120);
-        // ✅ Bubble immer informieren, wenn das Map-Level wirklich gewechselt hat
-      window.parent.postMessage({
-        type: "levelChanged",
-        payload: { level: currentLevel }
-      }, "*");
+
+    window.parent.postMessage({
+      type: "levelChanged",
+      payload: { level: currentLevel }
+    }, "*");
   }
 
   function clearHoverEU() {
@@ -836,13 +843,20 @@
     if (!msg || typeof msg !== "object") return;
 
     if (msg.type === "setLevel") {
-        // neu: optionales keepView
-        const keepView = !!msg.keepView;
-        setLevel(msg.level, { keepView });
-      }
+      const keepView =
+        !!msg.keepView ||
+        !!(msg.options && msg.options.keepView) ||
+        !!(msg.opts && msg.opts.keepView);
+
+      setLevel(msg.level, { keepView });
+      return;
+    }
 
     if (msg.type === "setMode") {
-      if (msg.mode === "sequence" || msg.mode === "explore") tripMode = msg.mode;
+      if (msg.mode === "sequence" || msg.mode === "explore") {
+        tripMode = msg.mode;
+      }
+      return;
     }
 
     if (msg.type === "flyTo") {
@@ -854,22 +868,26 @@
         });
         setTimeout(() => redrawAll(), 120);
       }
+      return;
     }
 
     if (msg.type === "setSelected") {
       selected = msg.selected || { start: null, stops: [], end: null };
       updateFlagsGeojson();
+      return;
     }
 
     if (msg.type === "setRoute") {
       lastRouteStops = (msg.stops || [])
         .filter(p => p && Number.isFinite(p.lng) && Number.isFinite(p.lat));
       redrawAll();
+      return;
     }
 
     if (msg.type === "showSearchSelection") {
       const p = msg.payload || {};
       if (!Number.isFinite(p.lng) || !Number.isFinite(p.lat)) return;
+
       setSearchSelectionOnMap(p.lng, p.lat, p.name);
       openPlacePopup({
         id: String(p.id || ""),
@@ -880,16 +898,18 @@
         lng: p.lng,
         lat: p.lat
       });
+      return;
     }
 
     if (msg.type === "clearSearchSelection") {
       clearSearchSelectionOnMap();
       closePlacePopup();
+      return;
     }
 
-    // Explore fills from Bubble
     if (msg.type === "setExploreStates") {
       applyExploreStates(msg.level || currentLevel, msg.must || [], msg.never || []);
+      return;
     }
   });
 
