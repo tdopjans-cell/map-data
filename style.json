@@ -11,6 +11,13 @@
       "scheme": "tms",
       "attribution": "Natural Earth II"
     },
+    "route_line": {
+      "type": "geojson",
+      "data": {
+        "type": "FeatureCollection",
+        "features": []
+      }
+    },
     "search_selection": {
       "type": "geojson",
       "data": { "type": "FeatureCollection", "features": [] }
@@ -351,6 +358,26 @@
         "icon-allow-overlap": true,
         "icon-anchor": "bottom",
         "icon-rotation-alignment": "viewport"
+      }
+    },
+        {
+      "id": "route-line",
+      "type": "line",
+      "source": "route_line",
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#183a6b",
+        "line-width": [
+          "interpolate", ["linear"], ["zoom"],
+          4, 2.5,
+          7, 4,
+          10, 6,
+          13, 8
+        ],
+        "line-opacity": 0.95
       }
     },
     {
