@@ -198,76 +198,65 @@
   window.addEventListener("resize", redrawAll);
   map.on("resize", redrawAll);
 
-  function drawPlayfulArrow(ax, ay, bx, by, fillColor) {
-    const dx = bx - ax, dy = by - ay;
+  function drawCurvedRouteSegment(ax, ay, bx, by, strokeColor, bendDir) {
+    const dx = bx - ax;
+    const dy = by - ay;
     const dist = Math.hypot(dx, dy);
-    if (dist < 10) return;
-
-    const shaftW = Math.max(6, Math.min(14, dist * 0.05));
-    const headL  = Math.max(18, Math.min(44, dist * 0.18));
-    const headW  = shaftW * 2.4;
-
-    const ux = dx / dist, uy = dy / dist;
-    const px = -uy, py = ux;
-
-    const endBack = 22;
-    const startFwd = 22;
-
-    const ex = bx - ux * endBack;
-    const ey = by - uy * endBack;
-    const sx = ax + ux * startFwd;
-    const sy = ay + uy * startFwd;
-
-    const hx = ex - ux * headL;
-    const hy = ey - uy * headL;
-
-    const sL = { x: sx + px * (shaftW/2), y: sy + py * (shaftW/2) };
-    const sR = { x: sx - px * (shaftW/2), y: sy - py * (shaftW/2) };
-    const hL = { x: hx + px * (shaftW/2), y: hy + py * (shaftW/2) };
-    const hR = { x: hx - px * (shaftW/2), y: hy - py * (shaftW/2) };
-
-    const kL = { x: hx + px * (headW/2), y: hy + py * (headW/2) };
-    const kR = { x: hx - px * (headW/2), y: hy - py * (headW/2) };
-
+    if (dist < 8) return;
+  
+    const ux = dx / dist;
+    const uy = dy / dist;
+  
+    const px = -uy;
+    const py = ux;
+  
+    const startPad = 18;
+    const endPad = 18;
+  
+    const sx = ax + ux * startPad;
+    const sy = ay + uy * startPad;
+    const ex = bx - ux * endPad;
+    const ey = by - uy * endPad;
+  
+    const curveAmount = Math.max(18, Math.min(90, dist * 0.18));
+    const dir = bendDir || 1;
+  
+    const cx = (sx + ex) / 2 + px * curveAmount * dir;
+    const cy = (sy + ey) / 2 + py * curveAmount * dir;
+  
     ctx.save();
-    ctx.shadowColor = "rgba(0,0,0,0.18)";
+    ctx.strokeStyle = strokeColor || "#39c35a";
+    ctx.lineWidth = Math.max(3, Math.min(6, dist * 0.018));
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.shadowColor = "rgba(0,0,0,0.16)";
     ctx.shadowBlur = 6;
-    ctx.shadowOffsetX = 1;
+    ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 2;
-
-    ctx.fillStyle = fillColor || "#39c35a";
-    ctx.strokeStyle = "#0b2220";
-    ctx.lineWidth = 2;
-
+  
     ctx.beginPath();
-    ctx.moveTo(sL.x, sL.y);
-    ctx.lineTo(hL.x, hL.y);
-    ctx.lineTo(kL.x, kL.y);
-    ctx.lineTo(ex, ey);
-    ctx.lineTo(kR.x, kR.y);
-    ctx.lineTo(hR.x, hR.y);
-    ctx.lineTo(sR.x, sR.y);
-    ctx.closePath();
-
-    ctx.fill();
+    ctx.moveTo(sx, sy);
+    ctx.quadraticCurveTo(cx, cy, ex, ey);
     ctx.stroke();
     ctx.restore();
   }
-
+  
   function drawRouteArrows() {
     clearCanvas();
     if (!Array.isArray(lastRouteStops) || lastRouteStops.length < 2) return;
-
+  
     for (let i = 0; i < lastRouteStops.length - 1; i++) {
       const a = lastRouteStops[i];
       const b = lastRouteStops[i + 1];
       if (!a || !b) continue;
-
+  
       const pA = map.project([a.lng, a.lat]);
       const pB = map.project([b.lng, b.lat]);
-
+  
       const color = (i === 0) ? "#39c35a" : "#f2c94c";
-      drawPlayfulArrow(pA.x, pA.y, pB.x, pB.y, color);
+      const bendDir = (i % 2 === 0) ? 1 : -1;
+  
+      drawCurvedRouteSegment(pA.x, pA.y, pB.x, pB.y, color, bendDir);
     }
   }
 
