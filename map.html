@@ -10,7 +10,7 @@
     html, body { margin:0; padding:0; height:100%; width:100%; }
     #wrap { position:relative; width:100%; height:100%; overflow:hidden; }
     #map { position:absolute; inset:0; }
-    #routeCanvas { position:absolute; inset:0; pointer-events:none; z-index:50; }
+    #routeCanvas { position:absolute; inset:0; pointer-events:none; z-index:1; display:none; }
 
     .maplibregl-popup-content{
       border-radius: 14px;
@@ -420,7 +420,34 @@
       }]
     });
   }
-
+    function setRouteLineOnMap(stops) {
+      const src = map.getSource("route_line");
+      if (!src) return;
+    
+      const coords = (stops || [])
+        .filter(p => p && Number.isFinite(p.lng) && Number.isFinite(p.lat))
+        .map(p => [p.lng, p.lat]);
+    
+      if (coords.length < 2) {
+        src.setData({
+          type: "FeatureCollection",
+          features: []
+        });
+        return;
+      }
+    
+      src.setData({
+        type: "FeatureCollection",
+        features: [{
+          type: "Feature",
+          geometry: {
+            type: "LineString",
+            coordinates: coords
+          },
+          properties: {}
+        }]
+      });
+    }
   function clearSearchSelectionOnMap() {
     const src = map.getSource("search_selection");
     if (!src) {
@@ -867,8 +894,8 @@
     }
 
     if (msg.type === "setRoute") {
-      lastRouteStops = (msg.stops || [])
-        .filter(p => p && Number.isFinite(p.lng) && Number.isFinite(p.lat));
+      lastRouteStops = [];
+      setRouteLineOnMap(msg.stops || []);
       redrawAll();
       return;
     }
