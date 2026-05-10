@@ -74,7 +74,14 @@
 
 <script>
   const STYLE_URL = "https://api.maptiler.com/maps/aquarelle-v4/style.json?key=bq7edtBllgSIwDJY9mGU";
-
+  
+  function sendToParent(msg) {
+    if (window.FlutterChannel) {
+      window.FlutterChannel.postMessage(JSON.stringify(msg));
+    }
+    window.parent.postMessage(msg, "*");
+  }
+  
   const EU_POINTS_URL = "./europe_inner_points.json";
   const DE_POINTS_URL = "./germany_inner_points.json";
   const CZ_POINTS_URL = "./czech_inner_points.json";
@@ -312,10 +319,10 @@
 
     setTimeout(() => redrawAll(), 120);
 
-    window.parent.postMessage({
+    sendToParent({
       type: "levelChanged",
       payload: { level: currentLevel }
-    }, "*");
+    });
   }
 
   function clearHoverEU() {
@@ -627,7 +634,7 @@
     }
 
     function sendAction(action, extra) {
-      window.parent.postMessage({
+      sendToParent({
         type: "placeAction",
         payload: {
           action,
@@ -640,7 +647,7 @@
           lng: place.lng,
           lat: place.lat
         }
-      }, "*");
+      });
     }
 
     // Stop setzen — immer sichtbar
@@ -734,10 +741,10 @@
           id, name, kind: "city", level: currentLevel, placeLevel: "city", lng, lat
         });
 
-        window.parent.postMessage({
-          type: "select",
-          payload: { id, name, kind: "city", level: currentLevel, placeLevel: "city", lng, lat }
-        }, "*");
+      sendToParent({
+        type: "select",
+        payload: { id, name, kind: "city", level: currentLevel, placeLevel: "city", lng, lat }
+      });
 
         return;
       }
@@ -790,11 +797,10 @@
       lng: centerLng, lat: centerLat
     });
 
-    window.parent.postMessage({
+    sendToParent({
       type: "select",
       payload: { id, name, kind: "area", level: currentLevel, placeLevel, lng: centerLng, lat: centerLat }
-    }, "*");
-  });
+    });
 
   // ===== Bubble -> Map messages =====
   window.addEventListener("message", (ev) => {
