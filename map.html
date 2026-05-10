@@ -61,6 +61,14 @@
 <script>
   const STYLE_URL = "./style.json?v=1";
 
+function sendToParent(msg) {
+  // Für Flutter
+  if (window.FlutterChannel) {
+    window.FlutterChannel.postMessage(JSON.stringify(msg));
+  }
+  // Für Bubble / Browser Fallback
+  window.parent.postMessage(msg, "*");
+}
   // ===== Inner points (Centroids) =====
   const EU_POINTS_URL = "./europe_inner_points.json";
   const DE_POINTS_URL = "./germany_inner_points.json";
@@ -314,10 +322,10 @@
 
     setTimeout(() => redrawAll(), 120);
 
-    window.parent.postMessage({
+    sendToParent({
       type: "levelChanged",
       payload: { level: currentLevel }
-    }, "*");
+    });
   }
 
   function clearHoverEU() {
@@ -646,12 +654,12 @@
       return b;
     }
 
-    function sendAction(action, extra = {}) {
-      window.parent.postMessage({
+    function sendAction(action, extra) {
+      sendToParent({
         type: "placeAction",
         payload: {
           action,
-          ...extra,
+          ...(extra || {}),
           id: place.id,
           name: place.name,
           kind: place.kind,
@@ -660,7 +668,7 @@
           lng: place.lng,
           lat: place.lat
         }
-      }, "*");
+      });
     }
 
     // ✅ EXPLORE UI (nur Priorisierung)
@@ -785,10 +793,10 @@
           id, name, kind: "city", level: currentLevel, placeLevel: "city", lng, lat
         });
 
-        window.parent.postMessage({
-          type: "select",
-          payload: { id, name, kind: "city", level: currentLevel, placeLevel: "city", lng, lat }
-        }, "*");
+      sendToParent({
+        type: "select",
+        payload: { id, name, kind: "city", level: currentLevel, placeLevel: "city", lng, lat }
+      });
 
         return;
       }
@@ -847,10 +855,10 @@
       lat: centerLat
     });
 
-    window.parent.postMessage({
+    sendToParent({
       type: "select",
       payload: { id, name, kind: "area", level: currentLevel, placeLevel, lng: centerLng, lat: centerLat }
-    }, "*");
+    });
   });
 
   // ===== Bubble -> Map messages =====
