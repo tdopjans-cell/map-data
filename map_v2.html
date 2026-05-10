@@ -1,0 +1,971 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+
+  <style>
+    html, body { margin:0; padding:0; height:100%; width:100%; }
+    #wrap { position:relative; width:100%; height:100%; overflow:hidden; }
+    #map { position:absolute; inset:0; }
+    #routeCanvas { position:absolute; inset:0; pointer-events:none; z-index:1; display:none; }
+
+    .maplibregl-popup-content{
+      border-radius: 14px;
+      padding: 12px 12px;
+      box-shadow: 0 12px 30px rgba(0,0,0,.18);
+    }
+    .maplibregl-popup-close-button{
+      font-size: 18px;
+      padding: 6px 10px;
+    }
+    .w2g-popup-title{
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 6px;
+    }
+    .w2g-popup-fact{
+      margin-top: 8px;
+      font-size: 12px;
+      color: #2C2416;
+    }
+    .w2g-popup-row{
+      display:flex;
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .w2g-btn{
+      flex:1;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid #2C2416;
+      background: #ffffff;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .w2g-btn-wide{
+      width:100%;
+      margin-top: 8px;
+    }
+    .w2g-btn-prefer{
+      border-color: #5BA68A;
+      color: #5BA68A;
+    }
+    .w2g-btn-never{
+      border-color: #E85D3A;
+      color: #E85D3A;
+    }
+    .w2g-btn-primary{
+      background: #E8A838;
+      border-color: #E8A838;
+      color: #ffffff;
+      font-weight: 600;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="wrap">
+    <div id="map"></div>
+    <canvas id="routeCanvas"></canvas>
+  </div>
+
+<script>
+  const STYLE_URL = "https://api.maptiler.com/maps/aquarelle-v4/style.json?key=bq7edtBllgSIwDJY9mGU";
+
+  const EU_POINTS_URL = "./europe_inner_points.json";
+  const DE_POINTS_URL = "./germany_inner_points.json";
+  const CZ_POINTS_URL = "./czech_inner_points.json";
+
+  let euInnerPointByIsoA2 = {};
+  let deInnerPointByIso3166_2 = {};
+  let czInnerPointByPlaceId = {};
+
+  async function loadInnerPoints() {
+    try {
+      const [euRes, deRes, czRes] = await Promise.all([
+        fetch(EU_POINTS_URL),
+        fetch(DE_POINTS_URL),
+        fetch(CZ_POINTS_URL)
+      ]);
+      const [euJson, deJson, czJson] = await Promise.all([
+        euRes.json(),
+        deRes.json(),
+        czRes.json()
+      ]);
+
+      euInnerPointByIsoA2 = indexPoints(euJson, ["ADM0_A3", "ISO_A2", "iso_a2"]);
+      deInnerPointByIso3166_2 = indexPoints(deJson, ["iso_3166_2", "ISO_3166_2"]);
+      czInnerPointByPlaceId = indexPoints(czJson, ["place_id", "ISO_3166_2", "iso_3166_2"]);
+
+      console.log("✅ Inner points loaded:", {
+        eu: Object.keys(euInnerPointByIsoA2).length,
+        de: Object.keys(deInnerPointByIso3166_2).length,
+        cz: Object.keys(czInnerPointByPlaceId).length
+      });
+    } catch (err) {
+      console.warn("⚠️ Failed to load inner points JSON:", err);
+    }
+  }
+
+  function indexPoints(geojson, keyProps) {
+    const out = {};
+    if (!geojson || !Array.isArray(geojson.features)) return out;
+
+    for (const f of geojson.features) {
+      const props = f?.properties || {};
+      let key = "";
+
+      for (const kp of keyProps) {
+        const v = String(props?.[kp] ?? "").trim();
+        if (v && v !== "-99") { key = v; break; }
+      }
+
+      const coords = f?.geometry?.coordinates;
+      if (!key || !coords || coords.length < 2) continue;
+      out[key] = coords;
+    }
+    return out;
+  }
+
+  function pickCountryId(props) {
+    const iso2 = String(props?.ISO_A2 || props?.iso_a2 || "").trim();
+    const a3   = String(props?.ADM0_A3 || props?.adm0_a3 || "").trim();
+    if (a3) return a3;
+    if (iso2 && iso2 !== "-99") return iso2;
+    return "";
+  }
+
+  function getInnerPointForArea(level, props, fallbackLngLat) {
+    const fallback = [fallbackLngLat.lng, fallbackLngLat.lat];
+
+    if (level === "europe") {
+      const key = pickCountryId(props);
+      return (key && euInnerPointByIsoA2[key]) || fallback;
+    }
+    if (level === "germany") {
+      const iso = String(props?.iso_3166_2 || props?.ISO_3166_2 || "");
+      return deInnerPointByIso3166_2[iso] || fallback;
+    }
+    if (level === "czechia") {
+      const pid = String(props?.place_id || props?.PLACE_ID || props?.iso_3166_2 || props?.ISO_3166_2 || "");
+      return czInnerPointByPlaceId[pid] || fallback;
+    }
+    return fallback;
+  }
+
+  let currentLevel = "europe";
+  let selected = { start: null, stops: [], end: null };
+  let lastRouteStops = [];
+
+  let hoveredIdEU = null;
+  let hoveredIdDE = null;
+  let hoveredIdCZ = null;
+
+  let selectedIdEU = null;
+  let selectedIdDE = null;
+  let selectedIdCZ = null;
+
+  let hoveredCityIdDE = null;
+  let selectedCityIdDE = null;
+
+  const map = new maplibregl.Map({
+    container: "map",
+    style: STYLE_URL,
+    center: [12, 52],
+    zoom: 3.5,
+    attributionControl: false
+  });
+
+  const canvas = document.getElementById("routeCanvas");
+  const ctx = canvas.getContext("2d");
+
+  function resizeCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = map.getContainer().getBoundingClientRect();
+    canvas.style.width = rect.width + "px";
+    canvas.style.height = rect.height + "px";
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function clearCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  function redrawAll() {
+    resizeCanvas();
+    drawRouteArrows();
+  }
+
+  window.addEventListener("resize", redrawAll);
+  map.on("resize", redrawAll);
+
+  function drawCurvedRouteSegment(ax, ay, bx, by, strokeColor, bendDir) {
+    const dx = bx - ax;
+    const dy = by - ay;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 8) return;
+
+    const ux = dx / dist;
+    const uy = dy / dist;
+    const px = -uy;
+    const py = ux;
+
+    const startPad = 18;
+    const endPad = 18;
+
+    const sx = ax + ux * startPad;
+    const sy = ay + uy * startPad;
+    const ex = bx - ux * endPad;
+    const ey = by - uy * endPad;
+
+    const curveAmount = Math.max(18, Math.min(90, dist * 0.18));
+    const dir = bendDir || 1;
+
+    const cx = (sx + ex) / 2 + px * curveAmount * dir;
+    const cy = (sy + ey) / 2 + py * curveAmount * dir;
+
+    ctx.save();
+    ctx.strokeStyle = strokeColor || "#E8A838";
+    ctx.lineWidth = Math.max(3, Math.min(6, dist * 0.018));
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.shadowColor = "rgba(0,0,0,0.16)";
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 2;
+
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.quadraticCurveTo(cx, cy, ex, ey);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawRouteArrows() {
+    clearCanvas();
+    if (!Array.isArray(lastRouteStops) || lastRouteStops.length < 2) return;
+
+    for (let i = 0; i < lastRouteStops.length - 1; i++) {
+      const a = lastRouteStops[i];
+      const b = lastRouteStops[i + 1];
+      if (!a || !b) continue;
+
+      const pA = map.project([a.lng, a.lat]);
+      const pB = map.project([b.lng, b.lat]);
+
+      const color = (i === 0) ? "#E8A838" : "#E85D3A";
+      const bendDir = (i % 2 === 0) ? 1 : -1;
+
+      drawCurvedRouteSegment(pA.x, pA.y, pB.x, pB.y, color, bendDir);
+    }
+  }
+
+  map.on("move", drawRouteArrows);
+  map.on("zoom", drawRouteArrows);
+
+  function safeSetVisibility(id, visible) {
+    try {
+      if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
+    } catch (e) {}
+  }
+
+  function setLevel(level, opts) {
+    opts = opts || {};
+    currentLevel = String(level || "europe");
+
+    const showEurope  = currentLevel === "europe";
+    const showGermany = currentLevel === "germany";
+    const showCzechia = currentLevel === "czechia";
+
+    safeSetVisibility("eu-countries-fill",  showEurope);
+    safeSetVisibility("eu-countries-line",  showEurope);
+    safeSetVisibility("eu-country-labels",  showEurope);
+
+    safeSetVisibility("de-states-fill",     showGermany);
+    safeSetVisibility("de-states-line",     showGermany);
+    safeSetVisibility("de-state-labels",    showGermany);
+    safeSetVisibility("de-places-hitbox",   showGermany);
+    safeSetVisibility("de-places-dot",      showGermany);
+    safeSetVisibility("de-place-labels",    showGermany);
+
+    safeSetVisibility("cz-regions-fill",    showCzechia);
+    safeSetVisibility("cz-regions-line",    showCzechia);
+    safeSetVisibility("cz-region-labels",   showCzechia);
+    safeSetVisibility("cz-places-dot",      showCzechia);
+    safeSetVisibility("cz-place-labels",    showCzechia);
+
+    clearHoverEU();
+    clearHoverDE();
+    clearHoverCZ();
+    clearHoverCityDE();
+
+    if (!opts.keepView) {
+      if (currentLevel === "europe")  map.flyTo({ center: [12, 52],    zoom: 3.5, duration: 900 });
+      if (currentLevel === "germany") map.flyTo({ center: [10.5, 51.2], zoom: 5.8, duration: 900 });
+      if (currentLevel === "czechia") map.flyTo({ center: [15.3, 49.8], zoom: 7.0, duration: 900 });
+    }
+
+    setTimeout(() => redrawAll(), 120);
+
+    window.parent.postMessage({
+      type: "levelChanged",
+      payload: { level: currentLevel }
+    }, "*");
+  }
+
+  function clearHoverEU() {
+    if (hoveredIdEU !== null && map.getSource("eu_countries")) {
+      try { map.setFeatureState({ source: "eu_countries", id: hoveredIdEU }, { hover: false }); } catch(e){}
+    }
+    hoveredIdEU = null;
+  }
+  function clearHoverDE() {
+    if (hoveredIdDE !== null && map.getSource("de_states")) {
+      try { map.setFeatureState({ source: "de_states", id: hoveredIdDE }, { hover: false }); } catch(e){}
+    }
+    hoveredIdDE = null;
+  }
+  function clearHoverCZ() {
+    if (hoveredIdCZ !== null && map.getSource("cz_regions")) {
+      try { map.setFeatureState({ source: "cz_regions", id: hoveredIdCZ }, { hover: false }); } catch(e){}
+    }
+    hoveredIdCZ = null;
+  }
+  function clearHoverCityDE() {
+    if (hoveredCityIdDE !== null && map.getSource("de_places")) {
+      try { map.setFeatureState({ source: "de_places", id: hoveredCityIdDE }, { hover: false }); } catch(e){}
+    }
+    hoveredCityIdDE = null;
+  }
+
+  function setSelectedEU(featureId) {
+    if (!map.getSource("eu_countries")) return;
+    if (selectedIdEU !== null) {
+      try { map.setFeatureState({ source: "eu_countries", id: selectedIdEU }, { selected: false }); } catch(e){}
+    }
+    selectedIdEU = featureId;
+    if (selectedIdEU !== null) {
+      try { map.setFeatureState({ source: "eu_countries", id: selectedIdEU }, { selected: true }); } catch(e){}
+    }
+  }
+
+  function setSelectedDE(featureId) {
+    if (!map.getSource("de_states")) return;
+    if (selectedIdDE !== null) {
+      try { map.setFeatureState({ source: "de_states", id: selectedIdDE }, { selected: false }); } catch(e){}
+    }
+    selectedIdDE = featureId;
+    if (selectedIdDE !== null) {
+      try { map.setFeatureState({ source: "de_states", id: selectedIdDE }, { selected: true }); } catch(e){}
+    }
+  }
+
+  function setSelectedCZ(featureId) {
+    if (!map.getSource("cz_regions")) return;
+    if (selectedIdCZ !== null) {
+      try { map.setFeatureState({ source: "cz_regions", id: selectedIdCZ }, { selected: false }); } catch(e){}
+    }
+    selectedIdCZ = featureId;
+    if (selectedIdCZ !== null) {
+      try { map.setFeatureState({ source: "cz_regions", id: selectedIdCZ }, { selected: true }); } catch(e){}
+    }
+  }
+
+  function setSelectedCityDE(cityFeatureId) {
+    if (!map.getSource("de_places")) return;
+    if (selectedCityIdDE !== null) {
+      try { map.setFeatureState({ source: "de_places", id: selectedCityIdDE }, { selected: false }); } catch(e){}
+    }
+    selectedCityIdDE = cityFeatureId;
+    if (selectedCityIdDE !== null) {
+      try { map.setFeatureState({ source: "de_places", id: selectedCityIdDE }, { selected: true }); } catch(e){}
+    }
+  }
+
+  async function addIconSafe(name, url) {
+    try {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = url;
+      await img.decode();
+      if (!map.hasImage(name)) map.addImage(name, img);
+    } catch (e) {
+      console.warn("Icon load fail", name, url, e);
+    }
+  }
+
+  let pendingSearchSelection = null;
+
+  function setSearchSelectionOnMap(lng, lat, name) {
+    const src = map.getSource("search_selection");
+    if (!src) {
+      pendingSearchSelection = { lng, lat, name };
+      return;
+    }
+    src.setData({
+      type: "FeatureCollection",
+      features: [{
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [lng, lat] },
+        properties: { name: String(name || "") }
+      }]
+    });
+  }
+
+  function setRouteLineOnMap(stops) {
+    const src = map.getSource("route_line");
+    if (!src) return;
+
+    const coords = (stops || [])
+      .filter(p => p && Number.isFinite(p.lng) && Number.isFinite(p.lat))
+      .map(p => [p.lng, p.lat]);
+
+    if (coords.length < 2) {
+      src.setData({ type: "FeatureCollection", features: [] });
+      return;
+    }
+
+    src.setData({
+      type: "FeatureCollection",
+      features: [{
+        type: "Feature",
+        geometry: { type: "LineString", coordinates: coords },
+        properties: {}
+      }]
+    });
+  }
+
+  function clearSearchSelectionOnMap() {
+    const src = map.getSource("search_selection");
+    if (!src) {
+      pendingSearchSelection = null;
+      return;
+    }
+    src.setData({ type: "FeatureCollection", features: [] });
+  }
+
+  function updateFlagsGeojson() {
+    const feats = [];
+
+    if (selected.start && isFinite(selected.start.lng) && isFinite(selected.start.lat)) {
+      feats.push({ type:"Feature", geometry:{ type:"Point", coordinates:[selected.start.lng, selected.start.lat] }, properties:{ role:"start" } });
+    }
+    for (const s of (selected.stops || [])) {
+      if (!s || !isFinite(s.lng) || !isFinite(s.lat)) continue;
+      feats.push({ type:"Feature", geometry:{ type:"Point", coordinates:[s.lng, s.lat] }, properties:{ role:"stop" } });
+    }
+    if (selected.end && isFinite(selected.end.lng) && isFinite(selected.end.lat)) {
+      feats.push({ type:"Feature", geometry:{ type:"Point", coordinates:[selected.end.lng, selected.end.lat] }, properties:{ role:"end" } });
+    }
+
+    const src = map.getSource("flags");
+    if (src) src.setData({ type:"FeatureCollection", features:feats });
+  }
+
+  // ===== Rule states (prefer/never) =====
+  const ruleStatesApplied = {
+    europe: new Set(),
+    germany: new Set(),
+    czechia: new Set()
+  };
+
+  function applyRuleStates(level, preferIds, neverIds) {
+    const lvl =
+      (level === "germany") ? "germany" :
+      (level === "czechia") ? "czechia" :
+      "europe";
+
+    const srcName =
+      (lvl === "germany") ? "de_states" :
+      (lvl === "czechia") ? "cz_regions" :
+      "eu_countries";
+
+    for (const id of ruleStatesApplied[lvl]) {
+      try { map.setFeatureState({ source: srcName, id: String(id) }, { explore: null }); } catch(e){}
+    }
+    ruleStatesApplied[lvl].clear();
+
+    (preferIds || []).forEach(id => {
+      const sid = String(id);
+      ruleStatesApplied[lvl].add(sid);
+      try { map.setFeatureState({ source: srcName, id: sid }, { explore: "must" }); } catch(e){}
+    });
+
+    (neverIds || []).forEach(id => {
+      const sid = String(id);
+      ruleStatesApplied[lvl].add(sid);
+      try { map.setFeatureState({ source: srcName, id: sid }, { explore: "never" }); } catch(e){}
+    });
+  }
+
+  function setRuleStateForCurrentLevel(placeId, state) {
+    const srcName =
+      (currentLevel === "germany") ? "de_states" :
+      (currentLevel === "czechia") ? "cz_regions" :
+      "eu_countries";
+
+    const sid = String(placeId);
+
+    try {
+      if (state === "neutral") {
+        map.setFeatureState({ source: srcName, id: sid }, { explore: null });
+      } else {
+        map.setFeatureState({ source: srcName, id: sid }, { explore: state });
+      }
+    } catch (e) {
+      console.warn("setRuleState failed", srcName, sid, state, e);
+    }
+  }
+
+  // ===== Hover =====
+  map.on("mousemove", (e) => {
+    if (currentLevel === "germany" && map.getLayer("de-places-hitbox")) {
+      const cityHits = map.queryRenderedFeatures(e.point, { layers: ["de-places-hitbox"] });
+      if (cityHits.length) {
+        const c = cityHits[0];
+        const cid = (c.id !== undefined && c.id !== null) ? c.id : null;
+
+        if (hoveredCityIdDE !== null && hoveredCityIdDE !== cid) {
+          try { map.setFeatureState({ source: "de_places", id: hoveredCityIdDE }, { hover: false }); } catch(e){}
+        }
+        hoveredCityIdDE = cid;
+        if (hoveredCityIdDE !== null) {
+          try { map.setFeatureState({ source: "de_places", id: hoveredCityIdDE }, { hover: true }); } catch(e){}
+        }
+        clearHoverDE();
+        return;
+      } else {
+        clearHoverCityDE();
+      }
+    }
+
+    const polyLayerId =
+      (currentLevel === "germany") ? "de-states-fill" :
+      (currentLevel === "czechia") ? "cz-regions-fill" :
+      "eu-countries-fill";
+
+    if (!map.getLayer(polyLayerId)) return;
+
+    const feats = map.queryRenderedFeatures(e.point, { layers: [polyLayerId] });
+    if (!feats.length) {
+      clearHoverEU();
+      clearHoverDE();
+      clearHoverCZ();
+      return;
+    }
+
+    const f = feats[0];
+    const fid = (f.id !== undefined && f.id !== null) ? f.id : null;
+
+    if (currentLevel === "europe") {
+      if (hoveredIdEU !== null && hoveredIdEU !== fid) {
+        try { map.setFeatureState({ source: "eu_countries", id: hoveredIdEU }, { hover: false }); } catch(e){}
+      }
+      hoveredIdEU = fid;
+      if (hoveredIdEU !== null) {
+        try { map.setFeatureState({ source: "eu_countries", id: hoveredIdEU }, { hover: true }); } catch(e){}
+      }
+      return;
+    }
+
+    if (currentLevel === "germany") {
+      if (hoveredIdDE !== null && hoveredIdDE !== fid) {
+        try { map.setFeatureState({ source: "de_states", id: hoveredIdDE }, { hover: false }); } catch(e){}
+      }
+      hoveredIdDE = fid;
+      if (hoveredIdDE !== null) {
+        try { map.setFeatureState({ source: "de_states", id: hoveredIdDE }, { hover: true }); } catch(e){}
+      }
+      return;
+    }
+
+    if (hoveredIdCZ !== null && hoveredIdCZ !== fid) {
+      try { map.setFeatureState({ source: "cz_regions", id: hoveredIdCZ }, { hover: false }); } catch(e){}
+    }
+    hoveredIdCZ = fid;
+    if (hoveredIdCZ !== null) {
+      try { map.setFeatureState({ source: "cz_regions", id: hoveredIdCZ }, { hover: true }); } catch(e){}
+    }
+  });
+
+  map.on("mouseleave", () => {
+    clearHoverEU();
+    clearHoverDE();
+    clearHoverCZ();
+    clearHoverCityDE();
+  });
+
+  // ===== Popup =====
+  let placePopup = null;
+
+  function buildPlacePopupDom(place) {
+    place = place || {};
+    place.id = String(place.id || "");
+    place.name = String(place.name || "Auswahl");
+    place.kind = String(place.kind || "");
+    place.level = String(place.level || "");
+    place.placeLevel = String(place.placeLevel || "");
+
+    const wrap = document.createElement("div");
+
+    const title = document.createElement("div");
+    title.className = "w2g-popup-title";
+    title.textContent = place.name;
+    wrap.appendChild(title);
+
+    function mkBtn(label, wide, extraClass) {
+      const b = document.createElement("button");
+      b.className = wide ? "w2g-btn w2g-btn-wide" : "w2g-btn";
+      if (extraClass) b.className += " " + extraClass;
+      b.textContent = label;
+      return b;
+    }
+
+    function sendAction(action, extra) {
+      window.parent.postMessage({
+        type: "placeAction",
+        payload: {
+          action,
+          ...(extra || {}),
+          id: place.id,
+          name: place.name,
+          kind: place.kind,
+          level: place.level,
+          placeLevel: place.placeLevel,
+          lng: place.lng,
+          lat: place.lat
+        }
+      }, "*");
+    }
+
+    // Stop setzen — immer sichtbar
+    const bStop = mkBtn("Stop setzen", true, "w2g-btn-primary");
+    wrap.appendChild(bStop);
+    bStop.onclick = () => sendAction("setStop");
+
+    // Prefer / Never — für Container-Level (country, region, state)
+    const isArea = place.kind === "area";
+    if (isArea) {
+      const row = document.createElement("div");
+      row.className = "w2g-popup-row";
+      wrap.appendChild(row);
+
+      const bPrefer = mkBtn("Bevorzugen ★", false, "w2g-btn-prefer");
+      const bNever  = mkBtn("Ausschließen ✖", false, "w2g-btn-never");
+      row.appendChild(bPrefer);
+      row.appendChild(bNever);
+
+      bPrefer.onclick = () => {
+        setRuleStateForCurrentLevel(place.id, "must");
+        sendAction("setRule", { state: "prefer" });
+      };
+      bNever.onclick = () => {
+        setRuleStateForCurrentLevel(place.id, "never");
+        sendAction("setRule", { state: "never" });
+      };
+
+      // Tiefer navigieren
+      const bDeeper = mkBtn("Tiefer erkunden ↘", true);
+      wrap.appendChild(bDeeper);
+      bDeeper.onclick = () => sendAction("jumpDeeper");
+    }
+
+    // Ebene höher — immer sichtbar
+    const bUp = mkBtn("Ebene höher ↖", true);
+    wrap.appendChild(bUp);
+    bUp.onclick = () => sendAction("levelUp");
+
+    return wrap;
+  }
+
+  function openPlacePopup(place) {
+    place = place || {};
+    place.lng = Number(place.lng);
+    place.lat = Number(place.lat);
+    if (!Number.isFinite(place.lng) || !Number.isFinite(place.lat)) return;
+
+    const dom = buildPlacePopupDom(place);
+
+    if (!placePopup) {
+      placePopup = new maplibregl.Popup({
+        closeButton: true,
+        closeOnClick: false,
+        offset: 18
+      });
+    }
+
+    placePopup
+      .setLngLat([place.lng, place.lat])
+      .setDOMContent(dom)
+      .addTo(map);
+  }
+
+  function closePlacePopup() {
+    if (placePopup) placePopup.remove();
+  }
+
+  // ===== Click =====
+  map.on("click", (e) => {
+    if (currentLevel === "germany" && map.getLayer("de-places-hitbox")) {
+      const cityHits = map.queryRenderedFeatures(e.point, { layers: ["de-places-hitbox"] });
+      if (cityHits.length) {
+        const c = cityHits[0];
+        const p = c.properties || {};
+        const cid = (c.id !== undefined && c.id !== null) ? c.id : null;
+
+        if (cid !== null) setSelectedCityDE(cid);
+
+        const name = String(p.name_de || p.NAME_DE || p.name || p.NAME || "");
+        const id = String(p.id || p.ID || name);
+
+        let lng = e.lngLat.lng;
+        let lat = e.lngLat.lat;
+        if (c.geometry && c.geometry.type === "Point" && Array.isArray(c.geometry.coordinates)) {
+          lng = c.geometry.coordinates[0];
+          lat = c.geometry.coordinates[1];
+        }
+
+        openPlacePopup({
+          id, name, kind: "city", level: currentLevel, placeLevel: "city", lng, lat
+        });
+
+        window.parent.postMessage({
+          type: "select",
+          payload: { id, name, kind: "city", level: currentLevel, placeLevel: "city", lng, lat }
+        }, "*");
+
+        return;
+      }
+    }
+
+    const polyLayers =
+      (currentLevel === "germany") ? ["de-states-fill"] :
+      (currentLevel === "czechia") ? ["cz-regions-fill"] :
+      ["eu-countries-fill"];
+
+    if (!polyLayers.every(id => map.getLayer(id))) return;
+
+    const feats = map.queryRenderedFeatures(e.point, { layers: polyLayers });
+    if (!feats.length) return;
+
+    const f = feats[0];
+    const p = f.properties || {};
+    const fid = (f.id !== undefined && f.id !== null) ? f.id : null;
+
+    if (fid !== null) {
+      if (currentLevel === "europe")  setSelectedEU(fid);
+      if (currentLevel === "germany") setSelectedDE(fid);
+      if (currentLevel === "czechia") setSelectedCZ(fid);
+    }
+
+    const name =
+      (currentLevel === "czechia")
+        ? String(p.name_de || p.name_en || p.name || p.NAME_DE || p.NAME_EN || p.NAME || "")
+        : (currentLevel === "germany")
+          ? String(p.NAME_1 || p.NAME_DE || p.NAME || p.name_de || p.name || "")
+          : String(p.NAME_DE || p.NAME || p.name_de || p.name || "");
+
+    const id =
+      (currentLevel === "czechia")
+        ? String(p.place_id || p.iso_3166_2 || p.ISO_3166_2 || fid || name)
+        : (currentLevel === "europe")
+          ? (pickCountryId(p) || String(name))
+          : String(p.iso_3166_2 || p.ISO_3166_2 || name);
+
+    const [centerLng, centerLat] = getInnerPointForArea(currentLevel, p, e.lngLat);
+
+    const placeLevel =
+      (currentLevel === "europe")  ? "country" :
+      (currentLevel === "germany") ? "region"  :
+      (currentLevel === "czechia") ? "region"  :
+      "region";
+
+    openPlacePopup({
+      id, name, kind: "area", level: currentLevel, placeLevel,
+      lng: centerLng, lat: centerLat
+    });
+
+    window.parent.postMessage({
+      type: "select",
+      payload: { id, name, kind: "area", level: currentLevel, placeLevel, lng: centerLng, lat: centerLat }
+    }, "*");
+  });
+
+  // ===== Bubble -> Map messages =====
+  window.addEventListener("message", (ev) => {
+    const msg = ev.data;
+    if (!msg || typeof msg !== "object") return;
+
+    if (msg.type === "setLevel") {
+      const keepView =
+        !!msg.keepView ||
+        !!(msg.options && msg.options.keepView) ||
+        !!(msg.opts && msg.opts.keepView);
+      setLevel(msg.level, { keepView });
+      return;
+    }
+
+    if (msg.type === "flyTo") {
+      if (Number.isFinite(msg.lng) && Number.isFinite(msg.lat)) {
+        map.flyTo({
+          center: [msg.lng, msg.lat],
+          zoom: msg.zoom || (currentLevel === "germany" ? 6.5 : (currentLevel === "czechia" ? 7.0 : 4.5)),
+          duration: 900
+        });
+        setTimeout(() => redrawAll(), 120);
+      }
+      return;
+    }
+
+    if (msg.type === "setSelected") {
+      selected = msg.selected || { start: null, stops: [], end: null };
+      updateFlagsGeojson();
+      return;
+    }
+
+    if (msg.type === "setRoute") {
+      lastRouteStops = [];
+      setRouteLineOnMap(msg.stops || []);
+      redrawAll();
+      return;
+    }
+
+    if (msg.type === "showSearchSelection") {
+      const p = msg.payload || {};
+      if (!Number.isFinite(p.lng) || !Number.isFinite(p.lat)) return;
+      setSearchSelectionOnMap(p.lng, p.lat, p.name);
+      openPlacePopup({
+        id: String(p.id || ""),
+        name: String(p.name || ""),
+        kind: String(p.kind || "place"),
+        level: currentLevel,
+        placeLevel: String(p.placeLevel || "city"),
+        lng: p.lng,
+        lat: p.lat
+      });
+      return;
+    }
+
+    if (msg.type === "clearSearchSelection") {
+      clearSearchSelectionOnMap();
+      closePlacePopup();
+      return;
+    }
+
+    if (msg.type === "setRuleStates") {
+      applyRuleStates(msg.level || currentLevel, msg.prefer || [], msg.never || []);
+      return;
+    }
+  });
+
+  // ===== Map load =====
+  map.on("load", async () => {
+    redrawAll();
+    await loadInnerPoints();
+
+    await addIconSafe("flag-start",  "./flag_start.png");
+    await addIconSafe("flag-stop",   "./flag_stop.png");
+    await addIconSafe("flag-end",    "./flag_end.png");
+    await addIconSafe("search-flag", "./search_flag.png");
+
+    // Eigene Sources on top des MapTiler Stils
+    map.addSource("route_line", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] }
+    });
+    map.addSource("search_selection", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] }
+    });
+    map.addSource("eu_countries", {
+      type: "geojson",
+      data: "./europe_detailed.json",
+      promoteId: "ADM0_A3"
+    });
+    map.addSource("eu_country_points", {
+      type: "geojson",
+      data: "./europe_inner_points.json"
+    });
+    map.addSource("de_states", {
+      type: "geojson",
+      data: "./germany_detailed.json",
+      promoteId: "iso_3166_2"
+    });
+    map.addSource("de_state_points", {
+      type: "geojson",
+      data: "./germany_inner_points.json"
+    });
+    map.addSource("de_places", {
+      type: "geojson",
+      data: "./de_places.json",
+      promoteId: "id"
+    });
+    map.addSource("cz_regions", {
+      type: "geojson",
+      data: "./czech_detailed.json",
+      promoteId: "place_id"
+    });
+    map.addSource("cz_region_points", {
+      type: "geojson",
+      data: "./czech_inner_points.json"
+    });
+    map.addSource("cz_places", {
+      type: "geojson",
+      data: "./cz_places.json",
+      promoteId: "id"
+    });
+    map.addSource("flags", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] }
+    });
+
+    // Eigene Layer on top
+    map.addLayer({ id: "eu-countries-fill", type: "fill", source: "eu_countries", layout: { visibility: "visible" }, paint: { "fill-color": [ "case", ["==", ["feature-state", "explore"], "must"], "#5BA68A", ["==", ["feature-state", "explore"], "never"], "#E85D3A", ["boolean", ["feature-state", "selected"], false], "#E8A838", ["boolean", ["feature-state", "hover"], false], "#F5F0E8", "#F5F0E8" ], "fill-opacity": [ "case", ["==", ["feature-state", "explore"], "must"], 0.4, ["==", ["feature-state", "explore"], "never"], 0.35, ["boolean", ["feature-state", "selected"], false], 0.3, ["boolean", ["feature-state", "hover"], false], 0.15, 0.0 ] } });
+    map.addLayer({ id: "eu-countries-line", type: "line", source: "eu_countries", layout: { visibility: "visible" }, paint: { "line-color": "rgba(44,36,22,0.4)", "line-width": 1 } });
+    map.addLayer({ id: "eu-country-labels", type: "symbol", source: "eu_country_points", layout: { visibility: "visible", "symbol-placement": "point", "text-field": ["coalesce", ["get", "NAME_DE"], ["get", "name_de"], ["get", "NAME"], ["get", "name"]], "text-font": ["Noto Sans Regular"], "text-size": 12, "text-anchor": "top", "text-offset": [0, 0.6], "text-allow-overlap": false }, paint: { "text-color": "#2C2416", "text-halo-color": "rgba(255,255,255,0.9)", "text-halo-width": 1 } });
+
+    map.addLayer({ id: "de-states-fill", type: "fill", source: "de_states", layout: { visibility: "none" }, paint: { "fill-color": [ "case", ["==", ["feature-state", "explore"], "must"], "#5BA68A", ["==", ["feature-state", "explore"], "never"], "#E85D3A", ["boolean", ["feature-state", "selected"], false], "#E8A838", ["boolean", ["feature-state", "hover"], false], "#F5F0E8", "#F5F0E8" ], "fill-opacity": [ "case", ["==", ["feature-state", "explore"], "must"], 0.4, ["==", ["feature-state", "explore"], "never"], 0.35, ["boolean", ["feature-state", "selected"], false], 0.3, ["boolean", ["feature-state", "hover"], false], 0.15, 0.0 ] } });
+    map.addLayer({ id: "de-states-line", type: "line", source: "de_states", layout: { visibility: "none" }, paint: { "line-color": "rgba(44,36,22,0.5)", "line-width": 1 } });
+    map.addLayer({ id: "de-state-labels", type: "symbol", source: "de_state_points", maxzoom: 6.6, layout: { visibility: "none", "symbol-placement": "point", "text-field": ["coalesce", ["get", "NAME_DE"], ["get", "NAME"], ["get", "name_de"], ["get", "name"]], "text-font": ["Noto Sans Regular"], "text-size": 12, "text-anchor": "top", "text-offset": [0, 0.6], "text-allow-overlap": false }, paint: { "text-color": "#2C2416", "text-halo-color": "rgba(255,255,255,0.95)", "text-halo-width": 2 } });
+    map.addLayer({ id: "de-places-hitbox", type: "circle", source: "de_places", minzoom: 6.7, layout: { visibility: "none" }, paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 10, 7, 16, 10, 22], "circle-color": ["case", ["boolean", ["feature-state", "selected"], false], "rgba(232,168,56,0.9)", ["boolean", ["feature-state", "hover"], false], "rgba(245,240,232,0.85)", "rgba(245,240,232,0.55)"], "circle-stroke-color": "rgba(44,36,22,0.2)", "circle-stroke-width": 1, "circle-blur": 0.6 } });
+    map.addLayer({ id: "de-places-dot", type: "circle", source: "de_places", minzoom: 6.7, layout: { visibility: "none" }, paint: { "circle-radius": 3, "circle-color": "rgba(44,36,22,0.75)" } });
+    map.addLayer({ id: "de-place-labels", type: "symbol", source: "de_places", minzoom: 6.7, layout: { visibility: "none", "text-field": ["coalesce", ["get", "name_de"], ["get", "NAME_DE"], ["get", "name"], ["get", "NAME"]], "text-font": ["Noto Sans Regular"], "text-size": 11, "text-letter-spacing": 0.03, "text-allow-overlap": true, "text-ignore-placement": true, "text-anchor": "center" }, paint: { "text-color": "rgba(44,36,22,0.85)", "text-halo-color": "rgba(255,255,255,0.98)", "text-halo-width": 1.2 } });
+
+    map.addLayer({ id: "cz-regions-fill", type: "fill", source: "cz_regions", layout: { visibility: "none" }, paint: { "fill-color": [ "case", ["==", ["feature-state", "explore"], "must"], "#5BA68A", ["==", ["feature-state", "explore"], "never"], "#E85D3A", ["boolean", ["feature-state", "selected"], false], "#E8A838", ["boolean", ["feature-state", "hover"], false], "#F5F0E8", "#F5F0E8" ], "fill-opacity": [ "case", ["==", ["feature-state", "explore"], "must"], 0.4, ["==", ["feature-state", "explore"], "never"], 0.35, ["boolean", ["feature-state", "selected"], false], 0.3, ["boolean", ["feature-state", "hover"], false], 0.15, 0.0 ] } });
+    map.addLayer({ id: "cz-regions-line", type: "line", source: "cz_regions", layout: { visibility: "none" }, paint: { "line-color": "rgba(44,36,22,0.5)", "line-width": 1 } });
+    map.addLayer({ id: "cz-region-labels", type: "symbol", source: "cz_region_points", maxzoom: 7.2, layout: { visibility: "none", "symbol-placement": "point", "text-field": ["coalesce", ["get", "name_de"], ["get", "name_en"], ["get", "name"], ["get", "NAME_DE"], ["get", "NAME_EN"], ["get", "NAME"]], "text-font": ["Noto Sans Regular"], "text-size": 12, "text-anchor": "top", "text-offset": [0, 0.6], "text-allow-overlap": false }, paint: { "text-color": "#2C2416", "text-halo-color": "rgba(255,255,255,0.95)", "text-halo-width": 2 } });
+    map.addLayer({ id: "cz-places-dot", type: "circle", source: "cz_places", minzoom: 7.3, layout: { visibility: "none" }, paint: { "circle-radius": 3, "circle-color": "rgba(44,36,22,0.75)" } });
+    map.addLayer({ id: "cz-place-labels", type: "symbol", source: "cz_places", minzoom: 7.3, layout: { visibility: "none", "text-field": ["coalesce", ["get", "name_de"], ["get", "name_en"], ["get", "name"], ["get", "NAME_DE"], ["get", "NAME_EN"], ["get", "NAME"]], "text-font": ["Noto Sans Regular"], "text-size": 11, "text-letter-spacing": 0.03, "text-allow-overlap": true, "text-ignore-placement": true, "text-anchor": "center" }, paint: { "text-color": "rgba(44,36,22,0.85)", "text-halo-color": "rgba(255,255,255,0.98)", "text-halo-width": 1.2 } });
+
+    map.addLayer({ id: "search-selection-icon", type: "symbol", source: "search_selection", layout: { "icon-image": "search-flag", "icon-size": ["interpolate", ["linear"], ["zoom"], 4, 0.10, 7, 0.12, 10, 0.14, 13, 0.16], "icon-allow-overlap": true, "icon-anchor": "bottom", "icon-rotation-alignment": "viewport" } });
+    map.addLayer({ id: "route-line", type: "line", source: "route_line", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#E8A838", "line-width": ["interpolate", ["linear"], ["zoom"], 4, 2.5, 7, 4, 10, 6, 13, 8], "line-opacity": 0.95 } });
+    map.addLayer({ id: "search-selection-label", type: "symbol", source: "search_selection", layout: { "text-field": ["get", "name"], "text-size": ["interpolate", ["linear"], ["zoom"], 4, 10, 7, 11, 10, 13, 13, 14], "text-offset": [0, 0.8], "text-anchor": "top", "text-allow-overlap": true }, paint: { "text-color": "#2C2416", "text-halo-color": "#ffffff", "text-halo-width": 2 } });
+    map.addLayer({ id: "flags", type: "symbol", source: "flags", layout: { visibility: "visible", "icon-image": ["match", ["get", "role"], "start", "flag-start", "stop", "flag-stop", "end", "flag-end", "flag-stop"], "icon-size": 0.18, "icon-allow-overlap": true, "icon-ignore-placement": true }, paint: { "icon-opacity": 0.95 } });
+
+    setLevel(currentLevel);
+    updateFlagsGeojson();
+    drawRouteArrows();
+
+    setTimeout(() => redrawAll(), 250);
+
+    if (pendingSearchSelection) {
+      const p = pendingSearchSelection;
+      pendingSearchSelection = null;
+      setSearchSelectionOnMap(p.lng, p.lat, p.name);
+    }
+  });
+
+  window.addEventListener("message", (ev) => {
+    if (ev.data && ev.data.type === "forceResize") {
+      try { map.resize(); } catch(e) {}
+      try { redrawAll(); } catch(e) {}
+    }
+  });
+</script>
+</body>
+</html>
