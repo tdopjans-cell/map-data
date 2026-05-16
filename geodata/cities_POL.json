@@ -1,0 +1,31 @@
+{
+"type": "FeatureCollection",
+"name": "cities_POL",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "NAME": "Katowice", "ADM0_A3": "POL", "ADM1NAME": "Silesian", "POP_MAX": 2746000, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 19.020017, 50.2603805 ] } },
+{ "type": "Feature", "properties": { "NAME": "Warsaw", "ADM0_A3": "POL", "ADM1NAME": "Masovian", "POP_MAX": 1707000, "FEATURECLA": "Admin-0 capital" }, "geometry": { "type": "Point", "coordinates": [ 21.005346737742283, 52.230871973539507 ] } },
+{ "type": "Feature", "properties": { "NAME": "Łódź", "ADM0_A3": "POL", "ADM1NAME": "Lódz", "POP_MAX": 758000, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 19.458228648552854, 51.767796866975637 ] } },
+{ "type": "Feature", "properties": { "NAME": "Kraków", "ADM0_A3": "POL", "ADM1NAME": "Lesser Poland", "POP_MAX": 756000, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 19.9580655, 50.0619251 ] } },
+{ "type": "Feature", "properties": { "NAME": "Gdańsk", "ADM0_A3": "POL", "ADM1NAME": "Pomeranian", "POP_MAX": 740000, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 18.6400402, 54.3599752 ] } },
+{ "type": "Feature", "properties": { "NAME": "Bytom", "ADM0_A3": "POL", "ADM1NAME": "Silesian", "POP_MAX": 662247, "FEATURECLA": "Populated place" }, "geometry": { "type": "Point", "coordinates": [ 18.9099979, 50.3500391 ] } },
+{ "type": "Feature", "properties": { "NAME": "Wrocław", "ADM0_A3": "POL", "ADM1NAME": "Lower Silesian", "POP_MAX": 634893, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 17.0300093, 51.1104319 ] } },
+{ "type": "Feature", "properties": { "NAME": "Poznań", "ADM0_A3": "POL", "ADM1NAME": "Greater Poland", "POP_MAX": 623997, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 16.8999397, 52.4057534 ] } },
+{ "type": "Feature", "properties": { "NAME": "Gliwice", "ADM0_A3": "POL", "ADM1NAME": "Silesian", "POP_MAX": 507670, "FEATURECLA": "Populated place" }, "geometry": { "type": "Point", "coordinates": [ 18.6700126, 50.3303762 ] } },
+{ "type": "Feature", "properties": { "NAME": "Szczecin", "ADM0_A3": "POL", "ADM1NAME": "West Pomeranian", "POP_MAX": 407811, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 14.5300069, 53.4203943 ] } },
+{ "type": "Feature", "properties": { "NAME": "Bydgoszcz", "ADM0_A3": "POL", "ADM1NAME": "Kuyavian-Pomeranian", "POP_MAX": 366452, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 18.0100012, 53.1204126 ] } },
+{ "type": "Feature", "properties": { "NAME": "Lublin", "ADM0_A3": "POL", "ADM1NAME": "Lublin", "POP_MAX": 360044, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 22.5727201, 51.2503976 ] } },
+{ "type": "Feature", "properties": { "NAME": "Gdynia", "ADM0_A3": "POL", "ADM1NAME": "Pomeranian", "POP_MAX": 314664, "FEATURECLA": "Populated place" }, "geometry": { "type": "Point", "coordinates": [ 18.5300211, 54.5203788 ] } },
+{ "type": "Feature", "properties": { "NAME": "Białystok", "ADM0_A3": "POL", "ADM1NAME": "Podlachian", "POP_MAX": 291855, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 23.182319226878395, 53.131695709802649 ] } },
+{ "type": "Feature", "properties": { "NAME": "Rzeszów", "ADM0_A3": "POL", "ADM1NAME": "Subcarpathian", "POP_MAX": 245686, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 21.995991522124438, 50.028654902480021 ] } },
+{ "type": "Feature", "properties": { "NAME": "Kielce", "ADM0_A3": "POL", "ADM1NAME": "Swietokrzyskie", "POP_MAX": 215733, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 20.6600203, 50.8903937 ] } },
+{ "type": "Feature", "properties": { "NAME": "Olsztyn", "ADM0_A3": "POL", "ADM1NAME": "Warmian-Masurian", "POP_MAX": 186670, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 20.485563980504729, 53.77258429042908 ] } },
+{ "type": "Feature", "properties": { "NAME": "Opole", "ADM0_A3": "POL", "ADM1NAME": "Opole", "POP_MAX": 131412, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 17.9313496, 50.6849799 ] } },
+{ "type": "Feature", "properties": { "NAME": "Elbląg", "ADM0_A3": "POL", "ADM1NAME": "Warmian-Masurian", "POP_MAX": 127558, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 19.403192827198289, 54.153919398075622 ] } },
+{ "type": "Feature", "properties": { "NAME": "Zielona Góra", "ADM0_A3": "POL", "ADM1NAME": "Lubusz", "POP_MAX": 118433, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 15.5000252, 51.9504065 ] } },
+{ "type": "Feature", "properties": { "NAME": "Koszalin", "ADM0_A3": "POL", "ADM1NAME": "West Pomeranian", "POP_MAX": 107450, "FEATURECLA": "Populated place" }, "geometry": { "type": "Point", "coordinates": [ 16.1833333, 54.2 ] } },
+{ "type": "Feature", "properties": { "NAME": "Grudziądz", "ADM0_A3": "POL", "ADM1NAME": "Kuyavian-Pomeranian", "POP_MAX": 102443, "FEATURECLA": "Populated place" }, "geometry": { "type": "Point", "coordinates": [ 18.7500077, 53.4803906 ] } },
+{ "type": "Feature", "properties": { "NAME": "Inowrocław", "ADM0_A3": "POL", "ADM1NAME": "Kuyavian-Pomeranian", "POP_MAX": 79007, "FEATURECLA": "Populated place" }, "geometry": { "type": "Point", "coordinates": [ 18.2499865, 52.7799424 ] } },
+{ "type": "Feature", "properties": { "NAME": "Ełk", "ADM0_A3": "POL", "ADM1NAME": "Warmian-Masurian", "POP_MAX": 55769, "FEATURECLA": "Populated place" }, "geometry": { "type": "Point", "coordinates": [ 22.3499947, 53.8337024 ] } }
+]
+}

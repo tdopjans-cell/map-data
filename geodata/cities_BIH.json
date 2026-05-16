@@ -1,0 +1,13 @@
+{
+"type": "FeatureCollection",
+"name": "cities_BIH",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "NAME": "Sarajevo", "ADM0_A3": "BIH", "ADM1NAME": "Sarajevo", "POP_MAX": 696731, "FEATURECLA": "Admin-0 capital" }, "geometry": { "type": "Point", "coordinates": [ 18.3830017, 43.8500224 ] } },
+{ "type": "Feature", "properties": { "NAME": "Banja Luka", "ADM0_A3": "BIH", "ADM1NAME": "Serbian Republic", "POP_MAX": 221738, "FEATURECLA": "Admin-0 region capital" }, "geometry": { "type": "Point", "coordinates": [ 17.1799743, 44.7804049 ] } },
+{ "type": "Feature", "properties": { "NAME": "Zenica", "ADM0_A3": "BIH", "ADM1NAME": "Zenica-Doboj", "POP_MAX": 164423, "FEATURECLA": "Populated place" }, "geometry": { "type": "Point", "coordinates": [ 17.9199808, 44.219974 ] } },
+{ "type": "Feature", "properties": { "NAME": "Mostar", "ADM0_A3": "BIH", "ADM1NAME": "Herzegovina-Neretva", "POP_MAX": 163067, "FEATURECLA": "Populated place" }, "geometry": { "type": "Point", "coordinates": [ 17.8200386, 43.3504922 ] } },
+{ "type": "Feature", "properties": { "NAME": "Tuzla", "ADM0_A3": "BIH", "ADM1NAME": "Tuzla", "POP_MAX": 144334, "FEATURECLA": "Populated place" }, "geometry": { "type": "Point", "coordinates": [ 18.6800378, 44.5504706 ] } },
+{ "type": "Feature", "properties": { "NAME": "Prijedor", "ADM0_A3": "BIH", "ADM1NAME": "Serbian Republic", "POP_MAX": 104858, "FEATURECLA": "Populated place" }, "geometry": { "type": "Point", "coordinates": [ 16.7000036, 44.9803927 ] } }
+]
+}
