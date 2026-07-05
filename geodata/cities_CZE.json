@@ -1,0 +1,19 @@
+{
+"type": "FeatureCollection",
+"name": "cities_CZE",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "NAME": "Prague", "ADM0_A3": "CZE", "ADM1NAME": "Prague", "POP_MAX": 1162000, "FEATURECLA": "Admin-0 capital" }, "geometry": { "type": "Point", "coordinates": [ 14.422939486203868, 50.086966537321501 ] } },
+{ "type": "Feature", "properties": { "NAME": "Ostrava", "ADM0_A3": "CZE", "ADM1NAME": "Moravskoslezský", "POP_MAX": 478963, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 18.2499865, 49.830355 ] } },
+{ "type": "Feature", "properties": { "NAME": "Brno", "ADM0_A3": "CZE", "ADM1NAME": "Kraj Vysocina", "POP_MAX": 388277, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 16.6099833, 49.2003935 ] } },
+{ "type": "Feature", "properties": { "NAME": "Pizen", "ADM0_A3": "CZE", "ADM1NAME": "Karlovarský", "POP_MAX": 164180, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 13.3600008, 49.740438 ] } },
+{ "type": "Feature", "properties": { "NAME": "Zlín", "ADM0_A3": "CZE", "ADM1NAME": "Kraj Vysocina", "POP_MAX": 124610, "FEATURECLA": "Populated place" }, "geometry": { "type": "Point", "coordinates": [ 17.6500232, 49.2304175 ] } },
+{ "type": "Feature", "properties": { "NAME": "Pardubice", "ADM0_A3": "CZE", "ADM1NAME": "Královéhradecký", "POP_MAX": 107064, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 15.7600093, 50.0404197 ] } },
+{ "type": "Feature", "properties": { "NAME": "Liberec", "ADM0_A3": "CZE", "ADM1NAME": "Liberecký", "POP_MAX": 102175, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 15.0799991, 50.7999599 ] } },
+{ "type": "Feature", "properties": { "NAME": "Olomouc", "ADM0_A3": "CZE", "ADM1NAME": "Moravskoslezský", "POP_MAX": 101268, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 17.256795794370266, 49.58666133426005 ] } },
+{ "type": "Feature", "properties": { "NAME": "České Budějovice", "ADM0_A3": "CZE", "ADM1NAME": "Jihoceský", "POP_MAX": 98851, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 14.460037, 48.9800193 ] } },
+{ "type": "Feature", "properties": { "NAME": "Hradec Králové", "ADM0_A3": "CZE", "ADM1NAME": "Královéhradecký", "POP_MAX": 95195, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 15.8120015, 50.2059962 ] } },
+{ "type": "Feature", "properties": { "NAME": "Usti Nad Labem", "ADM0_A3": "CZE", "ADM1NAME": "Liberecký", "POP_MAX": 94105, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 14.0810046, 50.6629982 ] } },
+{ "type": "Feature", "properties": { "NAME": "Jihlava", "ADM0_A3": "CZE", "ADM1NAME": "Kraj Vysocina", "POP_MAX": 53921, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 15.5833276, 49.4003813 ] } }
+]
+}

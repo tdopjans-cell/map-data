@@ -1,0 +1,13 @@
+{
+"type": "FeatureCollection",
+"name": "cities_LVA",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "NAME": "Riga", "ADM0_A3": "LVA", "ADM1NAME": "Riga", "POP_MAX": 742572, "FEATURECLA": "Admin-0 capital" }, "geometry": { "type": "Point", "coordinates": [ 24.0999654, 56.9500238 ] } },
+{ "type": "Feature", "properties": { "NAME": "Daugavpils", "ADM0_A3": "LVA", "ADM1NAME": "Daugavpils", "POP_MAX": 111564, "FEATURECLA": "Populated place" }, "geometry": { "type": "Point", "coordinates": [ 26.5099991, 55.8799599 ] } },
+{ "type": "Feature", "properties": { "NAME": "Liepaga", "ADM0_A3": "LVA", "ADM1NAME": "Liepaja", "POP_MAX": 85132, "FEATURECLA": "Populated place" }, "geometry": { "type": "Point", "coordinates": [ 21.0100248, 56.5099732 ] } },
+{ "type": "Feature", "properties": { "NAME": "Jelgava", "ADM0_A3": "LVA", "ADM1NAME": "Jelgava", "POP_MAX": 67207, "FEATURECLA": "Populated place" }, "geometry": { "type": "Point", "coordinates": [ 23.7128055, 56.6527035 ] } },
+{ "type": "Feature", "properties": { "NAME": "Ventspils", "ADM0_A3": "LVA", "ADM1NAME": "Ventspils", "POP_MAX": 42884, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 21.5605855, 57.3898678 ] } },
+{ "type": "Feature", "properties": { "NAME": "Rēzekne", "ADM0_A3": "LVA", "ADM1NAME": "Latgale", "POP_MAX": 38340, "FEATURECLA": "Populated place" }, "geometry": { "type": "Point", "coordinates": [ 27.3165649, 56.5000255 ] } }
+]
+}

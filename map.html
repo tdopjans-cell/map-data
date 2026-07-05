@@ -1,0 +1,1002 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+
+  <style>
+    html, body { margin:0; padding:0; height:100%; width:100%; }
+    #wrap { position:relative; width:100%; height:100%; overflow:hidden; }
+    #map { position:absolute; inset:0; }
+    #routeCanvas { position:absolute; inset:0; pointer-events:none; z-index:1; display:none; }
+
+    .maplibregl-popup-content{
+      border-radius: 14px;
+      padding: 12px 12px;
+      box-shadow: 0 12px 30px rgba(0,0,0,.18);
+    }
+    .maplibregl-popup-close-button{
+      font-size: 18px;
+      padding: 6px 10px;
+    }
+    .w2g-popup-title{
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 6px;
+    }
+    .w2g-popup-fact{
+      margin-top: 8px;
+      font-size: 12px;
+      color: #0b2220;
+    }
+    .w2g-popup-row{
+      display:flex;
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .w2g-btn{
+      flex:1;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid #0b2220;
+      background: #ffffff;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .w2g-btn-wide{
+      width:100%;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="wrap">
+    <div id="map"></div>
+    <canvas id="routeCanvas"></canvas>
+  </div>
+
+<script>
+  const STYLE_URL = "./style.json?v=1";
+
+function sendToParent(msg) {
+  // Für Flutter
+  if (window.FlutterChannel) {
+    window.FlutterChannel.postMessage(JSON.stringify(msg));
+  }
+  // Für Bubble / Browser Fallback
+  window.parent.postMessage(msg, "*");
+}
+  // ===== Inner points (Centroids) =====
+  const EU_POINTS_URL = "./europe_inner_points.json";
+  const DE_POINTS_URL = "./germany_inner_points.json";
+  const CZ_POINTS_URL = "./czech_inner_points.json";
+
+  let euInnerPointByIsoA2 = {};
+  let deInnerPointByIso3166_2 = {};
+  let czInnerPointByPlaceId = {};
+
+  async function loadInnerPoints() {
+    try {
+      const [euRes, deRes, czRes] = await Promise.all([
+        fetch(EU_POINTS_URL),
+        fetch(DE_POINTS_URL),
+        fetch(CZ_POINTS_URL)
+      ]);
+      const [euJson, deJson, czJson] = await Promise.all([
+        euRes.json(),
+        deRes.json(),
+        czRes.json()
+      ]);
+
+      euInnerPointByIsoA2 = indexPoints(euJson, ["ADM0_A3", "ISO_A2", "iso_a2"]);
+      deInnerPointByIso3166_2 = indexPoints(deJson, ["iso_3166_2", "ISO_3166_2"]);
+      czInnerPointByPlaceId = indexPoints(czJson, ["place_id", "ISO_3166_2", "iso_3166_2"]);
+
+      console.log("✅ Inner points loaded:", {
+        eu: Object.keys(euInnerPointByIsoA2).length,
+        de: Object.keys(deInnerPointByIso3166_2).length,
+        cz: Object.keys(czInnerPointByPlaceId).length
+      });
+    } catch (err) {
+      console.warn("⚠️ Failed to load inner points JSON:", err);
+    }
+  }
+
+  function indexPoints(geojson, keyProps) {
+    const out = {};
+    if (!geojson || !Array.isArray(geojson.features)) return out;
+
+    for (const f of geojson.features) {
+      const props = f?.properties || {};
+      let key = "";
+
+      for (const kp of keyProps) {
+        const v = String(props?.[kp] ?? "").trim();
+        if (v && v !== "-99") { key = v; break; }
+      }
+
+      const coords = f?.geometry?.coordinates;
+      if (!key || !coords || coords.length < 2) continue;
+      out[key] = coords; // [lng,lat]
+    }
+    return out;
+  }
+
+  function pickCountryId(props) {
+    const iso2 = String(props?.ISO_A2 || props?.iso_a2 || "").trim();
+    const a3   = String(props?.ADM0_A3 || props?.adm0_a3 || "").trim();
+    if (a3) return a3;              // ADM0_A3 bevorzugt (weltweit stabil)
+    if (iso2 && iso2 !== "-99") return iso2;
+    return "";
+  }
+
+  function getInnerPointForArea(level, props, fallbackLngLat) {
+    const fallback = [fallbackLngLat.lng, fallbackLngLat.lat];
+
+    if (level === "europe") {
+      const key = pickCountryId(props);
+      return (key && euInnerPointByIsoA2[key]) || fallback;
+    }
+
+    if (level === "germany") {
+      const iso = String(props?.iso_3166_2 || props?.ISO_3166_2 || "");
+      return deInnerPointByIso3166_2[iso] || fallback;
+    }
+
+    if (level === "czechia") {
+      const pid = String(props?.place_id || props?.PLACE_ID || props?.iso_3166_2 || props?.ISO_3166_2 || "");
+      return czInnerPointByPlaceId[pid] || fallback;
+    }
+
+    return fallback;
+  }
+
+  let currentLevel = "europe";
+  let tripMode = "sequence"; // "sequence" | "explore"  (später ersetzen wir das durch Explore-Subflow pro Stop)
+  let selected = { start: null, stops: [], end: null };
+  let lastRouteStops = [];
+
+  // Hover/Selected state
+  let hoveredIdEU = null;
+  let hoveredIdDE = null;
+  let hoveredIdCZ = null;
+
+  let selectedIdEU = null;
+  let selectedIdDE = null;
+  let selectedIdCZ = null;
+
+  let hoveredCityIdDE = null;
+  let selectedCityIdDE = null;
+
+  const map = new maplibregl.Map({
+    container: "map",
+    style: STYLE_URL,
+    center: [12, 52],
+    zoom: 3.5,
+    attributionControl: false
+  });
+
+  // ===== Canvas setup =====
+  const canvas = document.getElementById("routeCanvas");
+  const ctx = canvas.getContext("2d");
+
+  function resizeCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = map.getContainer().getBoundingClientRect();
+
+    canvas.style.width = rect.width + "px";
+    canvas.style.height = rect.height + "px";
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function clearCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  function redrawAll() {
+    resizeCanvas();
+    drawRouteArrows();
+  }
+
+  window.addEventListener("resize", redrawAll);
+  map.on("resize", redrawAll);
+
+  function drawCurvedRouteSegment(ax, ay, bx, by, strokeColor, bendDir) {
+    const dx = bx - ax;
+    const dy = by - ay;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 8) return;
+  
+    const ux = dx / dist;
+    const uy = dy / dist;
+  
+    const px = -uy;
+    const py = ux;
+  
+    const startPad = 18;
+    const endPad = 18;
+  
+    const sx = ax + ux * startPad;
+    const sy = ay + uy * startPad;
+    const ex = bx - ux * endPad;
+    const ey = by - uy * endPad;
+  
+    const curveAmount = Math.max(18, Math.min(90, dist * 0.18));
+    const dir = bendDir || 1;
+  
+    const cx = (sx + ex) / 2 + px * curveAmount * dir;
+    const cy = (sy + ey) / 2 + py * curveAmount * dir;
+  
+    ctx.save();
+    ctx.strokeStyle = strokeColor || "#39c35a";
+    ctx.lineWidth = Math.max(3, Math.min(6, dist * 0.018));
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.shadowColor = "rgba(0,0,0,0.16)";
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 2;
+  
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.quadraticCurveTo(cx, cy, ex, ey);
+    ctx.stroke();
+    ctx.restore();
+  }
+  
+  function drawRouteArrows() {
+    clearCanvas();
+    if (!Array.isArray(lastRouteStops) || lastRouteStops.length < 2) return;
+  
+    for (let i = 0; i < lastRouteStops.length - 1; i++) {
+      const a = lastRouteStops[i];
+      const b = lastRouteStops[i + 1];
+      if (!a || !b) continue;
+  
+      const pA = map.project([a.lng, a.lat]);
+      const pB = map.project([b.lng, b.lat]);
+  
+      const color = (i === 0) ? "#39c35a" : "#f2c94c";
+      const bendDir = (i % 2 === 0) ? 1 : -1;
+  
+      drawCurvedRouteSegment(pA.x, pA.y, pB.x, pB.y, color, bendDir);
+    }
+  }
+
+  map.on("move", drawRouteArrows);
+  map.on("zoom", drawRouteArrows);
+
+  function safeSetVisibility(id, visible) {
+    try {
+      if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
+    } catch (e) {}
+  }
+
+  function setLevel(level, opts) {
+    opts = opts || {};
+    currentLevel = String(level || "europe");
+
+    const showEurope = currentLevel === "europe";
+    const showGermany = currentLevel === "germany";
+    const showCzechia = currentLevel === "czechia";
+
+    safeSetVisibility("eu-countries-fill", showEurope);
+    safeSetVisibility("eu-countries-line", showEurope);
+    safeSetVisibility("eu-country-labels", showEurope);
+
+    safeSetVisibility("de-states-fill", showGermany);
+    safeSetVisibility("de-states-line", showGermany);
+    safeSetVisibility("de-state-labels", showGermany);
+
+    safeSetVisibility("de-places-hitbox", showGermany);
+    safeSetVisibility("de-places-dot", showGermany);
+    safeSetVisibility("de-place-labels", showGermany);
+
+    safeSetVisibility("cz-regions-fill", showCzechia);
+    safeSetVisibility("cz-regions-line", showCzechia);
+    safeSetVisibility("cz-region-labels", showCzechia);
+    safeSetVisibility("cz-places-dot", showCzechia);
+    safeSetVisibility("cz-place-labels", showCzechia);
+
+    clearHoverEU();
+    clearHoverDE();
+    clearHoverCZ();
+    clearHoverCityDE();
+
+    if (!opts.keepView) {
+      if (currentLevel === "europe") {
+        map.flyTo({ center: [12, 52], zoom: 3.5, duration: 900 });
+      }
+      if (currentLevel === "germany") {
+        map.flyTo({ center: [10.5, 51.2], zoom: 5.8, duration: 900 });
+      }
+      if (currentLevel === "czechia") {
+        map.flyTo({ center: [15.3, 49.8], zoom: 7.0, duration: 900 });
+      }
+    }
+
+    setTimeout(() => redrawAll(), 120);
+
+    sendToParent({
+      type: "levelChanged",
+      payload: { level: currentLevel }
+    });
+  }
+
+  function clearHoverEU() {
+    if (hoveredIdEU !== null && map.getSource("eu_countries")) {
+      try { map.setFeatureState({ source: "eu_countries", id: hoveredIdEU }, { hover: false }); } catch(e){}
+    }
+    hoveredIdEU = null;
+  }
+  function clearHoverDE() {
+    if (hoveredIdDE !== null && map.getSource("de_states")) {
+      try { map.setFeatureState({ source: "de_states", id: hoveredIdDE }, { hover: false }); } catch(e){}
+    }
+    hoveredIdDE = null;
+  }
+  function clearHoverCZ() {
+    if (hoveredIdCZ !== null && map.getSource("cz_regions")) {
+      try { map.setFeatureState({ source: "cz_regions", id: hoveredIdCZ }, { hover: false }); } catch(e){}
+    }
+    hoveredIdCZ = null;
+  }
+  function clearHoverCityDE() {
+    if (hoveredCityIdDE !== null && map.getSource("de_places")) {
+      try { map.setFeatureState({ source: "de_places", id: hoveredCityIdDE }, { hover: false }); } catch(e){}
+    }
+    hoveredCityIdDE = null;
+  }
+
+  function setSelectedEU(featureId) {
+    if (!map.getSource("eu_countries")) return;
+    if (selectedIdEU !== null) {
+      try { map.setFeatureState({ source: "eu_countries", id: selectedIdEU }, { selected: false }); } catch(e){}
+    }
+    selectedIdEU = featureId;
+    if (selectedIdEU !== null) {
+      try { map.setFeatureState({ source: "eu_countries", id: selectedIdEU }, { selected: true }); } catch(e){}
+    }
+  }
+
+  function setSelectedDE(featureId) {
+    if (!map.getSource("de_states")) return;
+    if (selectedIdDE !== null) {
+      try { map.setFeatureState({ source: "de_states", id: selectedIdDE }, { selected: false }); } catch(e){}
+    }
+    selectedIdDE = featureId;
+    if (selectedIdDE !== null) {
+      try { map.setFeatureState({ source: "de_states", id: selectedIdDE }, { selected: true }); } catch(e){}
+    }
+  }
+
+  function setSelectedCZ(featureId) {
+    if (!map.getSource("cz_regions")) return;
+    if (selectedIdCZ !== null) {
+      try { map.setFeatureState({ source: "cz_regions", id: selectedIdCZ }, { selected: false }); } catch(e){}
+    }
+    selectedIdCZ = featureId;
+    if (selectedIdCZ !== null) {
+      try { map.setFeatureState({ source: "cz_regions", id: selectedIdCZ }, { selected: true }); } catch(e){}
+    }
+  }
+
+  function setSelectedCityDE(cityFeatureId) {
+    if (!map.getSource("de_places")) return;
+    if (selectedCityIdDE !== null) {
+      try { map.setFeatureState({ source: "de_places", id: selectedCityIdDE }, { selected: false }); } catch(e){}
+    }
+    selectedCityIdDE = cityFeatureId;
+    if (selectedCityIdDE !== null) {
+      try { map.setFeatureState({ source: "de_places", id: selectedCityIdDE }, { selected: true }); } catch(e){}
+    }
+  }
+
+  async function addIconSafe(name, url) {
+    try {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = url;
+      await img.decode();
+      if (!map.hasImage(name)) map.addImage(name, img);
+    } catch (e) {
+      console.warn("Icon load fail", name, url, e);
+    }
+  }
+
+  // ===== Search Selection buffer + setters =====
+  let pendingSearchSelection = null;
+
+  function setSearchSelectionOnMap(lng, lat, name) {
+    const src = map.getSource("search_selection");
+    if (!src) {
+      pendingSearchSelection = { lng, lat, name };
+      return;
+    }
+
+    src.setData({
+      type: "FeatureCollection",
+      features: [{
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [lng, lat] },
+        properties: { name: String(name || "") }
+      }]
+    });
+  }
+    function setRouteLineOnMap(stops) {
+      const src = map.getSource("route_line");
+      if (!src) return;
+    
+      const coords = (stops || [])
+        .filter(p => p && Number.isFinite(p.lng) && Number.isFinite(p.lat))
+        .map(p => [p.lng, p.lat]);
+    
+      if (coords.length < 2) {
+        src.setData({
+          type: "FeatureCollection",
+          features: []
+        });
+        return;
+      }
+    
+      src.setData({
+        type: "FeatureCollection",
+        features: [{
+          type: "Feature",
+          geometry: {
+            type: "LineString",
+            coordinates: coords
+          },
+          properties: {}
+        }]
+      });
+    }
+  function clearSearchSelectionOnMap() {
+    const src = map.getSource("search_selection");
+    if (!src) {
+      pendingSearchSelection = null;
+      return;
+    }
+    src.setData({ type: "FeatureCollection", features: [] });
+  }
+
+  function updateFlagsGeojson() {
+    const feats = [];
+
+    if (selected.start && isFinite(selected.start.lng) && isFinite(selected.start.lat)) {
+      feats.push({ type:"Feature", geometry:{ type:"Point", coordinates:[selected.start.lng, selected.start.lat] }, properties:{ role:"start" } });
+    }
+    for (const s of (selected.stops || [])) {
+      if (!s || !isFinite(s.lng) || !isFinite(s.lat)) continue;
+      feats.push({ type:"Feature", geometry:{ type:"Point", coordinates:[s.lng, s.lat] }, properties:{ role:"stop" } });
+    }
+    if (selected.end && isFinite(selected.end.lng) && isFinite(selected.end.lat)) {
+      feats.push({ type:"Feature", geometry:{ type:"Point", coordinates:[selected.end.lng, selected.end.lat] }, properties:{ role:"end" } });
+    }
+
+    const src = map.getSource("flags");
+    if (src) src.setData({ type:"FeatureCollection", features:feats });
+  }
+
+  // ===== EXPLORE FILL STATES (Must/Never) from Bubble =====
+  const exploreApplied = {
+    europe: new Set(),
+    germany: new Set(),
+    czechia: new Set()
+  };
+
+  function applyExploreStates(level, mustIds, neverIds) {
+    const lvl =
+      (level === "germany") ? "germany" :
+      (level === "czechia") ? "czechia" :
+      "europe";
+
+    const srcName =
+      (lvl === "germany") ? "de_states" :
+      (lvl === "czechia") ? "cz_regions" :
+      "eu_countries";
+
+    for (const id of exploreApplied[lvl]) {
+      try { map.setFeatureState({ source: srcName, id: String(id) }, { explore: null }); } catch(e){}
+    }
+    exploreApplied[lvl].clear();
+
+    (mustIds || []).forEach(id => {
+      const sid = String(id);
+      exploreApplied[lvl].add(sid);
+      try { map.setFeatureState({ source: srcName, id: sid }, { explore: "must" }); } catch(e){}
+    });
+
+    (neverIds || []).forEach(id => {
+      const sid = String(id);
+      exploreApplied[lvl].add(sid);
+      try { map.setFeatureState({ source: srcName, id: sid }, { explore: "never" }); } catch(e){}
+    });
+  }
+
+  // ===== EXPLORE immediate feedback (local feature-state set) =====
+  function setExploreStateForCurrentLevel(placeId, state) {
+    const srcName =
+      (currentLevel === "germany") ? "de_states" :
+      (currentLevel === "czechia") ? "cz_regions" :
+      "eu_countries";
+
+    const sid = String(placeId);
+
+    try {
+      if (state === "neutral") {
+        map.setFeatureState({ source: srcName, id: sid }, { explore: null });
+      } else {
+        map.setFeatureState({ source: srcName, id: sid }, { explore: state }); // "must" | "never"
+      }
+    } catch (e) {
+      console.warn("setExploreState failed", srcName, sid, state, e);
+    }
+  }
+
+  // ===== Hover =====
+  map.on("mousemove", (e) => {
+    if (currentLevel === "germany" && map.getLayer("de-places-hitbox")) {
+      const cityHits = map.queryRenderedFeatures(e.point, { layers: ["de-places-hitbox"] });
+      if (cityHits.length) {
+        const c = cityHits[0];
+        const cid = (c.id !== undefined && c.id !== null) ? c.id : null;
+
+        if (hoveredCityIdDE !== null && hoveredCityIdDE !== cid) {
+          try { map.setFeatureState({ source: "de_places", id: hoveredCityIdDE }, { hover: false }); } catch(e){}
+        }
+        hoveredCityIdDE = cid;
+        if (hoveredCityIdDE !== null) {
+          try { map.setFeatureState({ source: "de_places", id: hoveredCityIdDE }, { hover: true }); } catch(e){}
+        }
+        clearHoverDE();
+        return;
+      } else {
+        clearHoverCityDE();
+      }
+    }
+
+    const polyLayerId =
+      (currentLevel === "germany") ? "de-states-fill" :
+      (currentLevel === "czechia") ? "cz-regions-fill" :
+      "eu-countries-fill";
+
+    if (!map.getLayer(polyLayerId)) return;
+
+    const feats = map.queryRenderedFeatures(e.point, { layers: [polyLayerId] });
+    if (!feats.length) {
+      clearHoverEU();
+      clearHoverDE();
+      clearHoverCZ();
+      return;
+    }
+
+    const f = feats[0];
+    const fid = (f.id !== undefined && f.id !== null) ? f.id : null;
+
+    if (currentLevel === "europe") {
+      if (hoveredIdEU !== null && hoveredIdEU !== fid) {
+        try { map.setFeatureState({ source: "eu_countries", id: hoveredIdEU }, { hover: false }); } catch(e){}
+      }
+      hoveredIdEU = fid;
+      if (hoveredIdEU !== null) {
+        try { map.setFeatureState({ source: "eu_countries", id: hoveredIdEU }, { hover: true }); } catch(e){}
+      }
+      return;
+    }
+
+    if (currentLevel === "germany") {
+      if (hoveredIdDE !== null && hoveredIdDE !== fid) {
+        try { map.setFeatureState({ source: "de_states", id: hoveredIdDE }, { hover: false }); } catch(e){}
+      }
+      hoveredIdDE = fid;
+      if (hoveredIdDE !== null) {
+        try { map.setFeatureState({ source: "de_states", id: hoveredIdDE }, { hover: true }); } catch(e){}
+      }
+      return;
+    }
+
+    // czechia
+    if (hoveredIdCZ !== null && hoveredIdCZ !== fid) {
+      try { map.setFeatureState({ source: "cz_regions", id: hoveredIdCZ }, { hover: false }); } catch(e){}
+    }
+    hoveredIdCZ = fid;
+    if (hoveredIdCZ !== null) {
+      try { map.setFeatureState({ source: "cz_regions", id: hoveredIdCZ }, { hover: true }); } catch(e){}
+    }
+  });
+
+  map.on("mouseleave", () => {
+    clearHoverEU();
+    clearHoverDE();
+    clearHoverCZ();
+    clearHoverCityDE();
+  });
+
+  // ===== Popup =====
+  let placePopup = null;
+
+  function buildPlacePopupDom(place) {
+    place = place || {};
+    place.id = String(place.id || "");
+    place.name = String(place.name || "Auswahl");
+    place.kind = String(place.kind || "");
+    place.level = String(place.level || "");
+    place.placeLevel = String(place.placeLevel || "");
+
+    const wrap = document.createElement("div");
+
+    const title = document.createElement("div");
+    title.className = "w2g-popup-title";
+    title.textContent = place.name;
+    wrap.appendChild(title);
+
+    const fact = document.createElement("div");
+    fact.className = "w2g-popup-fact";
+    fact.textContent = (tripMode === "explore")
+      ? "Explorer-Modus: priorisieren / depriorisieren (ohne Reihenfolge)."
+      : "Nice-to-know (Placeholder) – später aus PlaceContent-Cache.";
+    wrap.appendChild(fact);
+
+    const row = document.createElement("div");
+    row.className = "w2g-popup-row";
+    wrap.appendChild(row);
+
+    function mkBtn(label, wide=false) {
+      const b = document.createElement("button");
+      b.className = wide ? "w2g-btn w2g-btn-wide" : "w2g-btn";
+      b.textContent = label;
+      return b;
+    }
+
+    function sendAction(action, extra) {
+      sendToParent({
+        type: "placeAction",
+        payload: {
+          action,
+          ...(extra || {}),
+          id: place.id,
+          name: place.name,
+          kind: place.kind,
+          level: place.level,
+          placeLevel: place.placeLevel,
+          lng: place.lng,
+          lat: place.lat
+        }
+      });
+    }
+
+    // ✅ EXPLORE UI (nur Priorisierung)
+      if (tripMode === "explore") {
+        // 1) Priorisierung (für aktuell angeklickte Fläche)
+        const bNeutral = mkBtn("Neutral");
+        const bMust = mkBtn("Muss");
+        const bNever = mkBtn("Niemals");
+      
+        row.appendChild(bNeutral);
+        row.appendChild(bMust);
+        row.appendChild(bNever);
+      
+        function pick(state) {
+          if (place.kind === "area") {
+            setExploreStateForCurrentLevel(place.id, state);
+          }
+          sendAction("setExplore", { state });
+        }
+      
+        bNeutral.onclick = () => pick("neutral");
+        bMust.onclick = () => pick("must");
+        bNever.onclick = () => pick("never");
+      
+        // 2) Globale Explore-Aktionen (für den gesamten Explore-Subflow)
+        const upBtn = mkBtn("Ebene höher ↖︎", true);
+        wrap.appendChild(upBtn);
+      
+        const saveBtn = mkBtn("Explore speichern ✅", true);
+        wrap.appendChild(saveBtn);
+      
+        const discardBtn = mkBtn("Explore verwerfen ✖︎", true);
+        wrap.appendChild(discardBtn);
+      
+        upBtn.onclick = () => sendAction("levelUp");
+        saveBtn.onclick = () => sendAction("saveExplore");
+        discardBtn.onclick = () => sendAction("discardExplore");
+      
+        return wrap;
+      }
+
+    // ✅ SEQUENCE UI (final)
+    // 1) Stop setzen (öffnet Bubble-Popup zum Speichern)
+    // 2) Explore hier ★ (nur sinnvoll für Area / country/region)
+    // 3) Level tiefer ↘︎ (datengetriebener Jump in Bubble)
+    
+    const bStopSet = mkBtn("Stop setzen", true);
+    wrap.appendChild(bStopSet);
+    
+    const bExplore = mkBtn("Explore hier ★", true);
+    wrap.appendChild(bExplore);
+    
+    const jump = mkBtn("Level tiefer ↘︎", true);
+    wrap.appendChild(jump);
+
+    const upBtn = mkBtn("Ebene höher ↖︎", true);
+    wrap.appendChild(upBtn);
+    upBtn.onclick = () => sendAction("levelUp");
+    
+    // Stop setzen: Bubble öffnet create-stop Popup (keine role mehr!)
+    bStopSet.onclick = () => sendAction("setStop");
+    
+    // Explore hier: nur für Flächen sinnvoll (country/region). Bubble entscheidet final.
+    bExplore.onclick = () => sendAction("startExplore");
+    
+    // Jump: Bubble entscheidet, welches child level existiert
+    jump.onclick = () => sendAction("jumpDeeper");
+    
+    return wrap;
+  }
+
+  function openPlacePopup(place) {
+    place = place || {};
+    place.lng = Number(place.lng);
+    place.lat = Number(place.lat);
+    if (!Number.isFinite(place.lng) || !Number.isFinite(place.lat)) return;
+
+    const dom = buildPlacePopupDom(place);
+
+    if (!placePopup) {
+      placePopup = new maplibregl.Popup({
+        closeButton: true,
+        closeOnClick: false,
+        offset: 18
+      });
+    }
+
+    placePopup
+      .setLngLat([place.lng, place.lat])
+      .setDOMContent(dom)
+      .addTo(map);
+  }
+
+  function closePlacePopup() {
+    if (placePopup) placePopup.remove();
+  }
+
+  // ===== Click -> Bubble select + highlight + Popup =====
+  map.on("click", (e) => {
+
+    // 1) Germany: City priorisieren (Hitbox)
+    if (currentLevel === "germany" && map.getLayer("de-places-hitbox")) {
+      const cityHits = map.queryRenderedFeatures(e.point, { layers: ["de-places-hitbox"] });
+      if (cityHits.length) {
+        const c = cityHits[0];
+        const p = c.properties || {};
+        const cid = (c.id !== undefined && c.id !== null) ? c.id : null;
+
+        if (cid !== null) setSelectedCityDE(cid);
+
+        const name = String(p.name_de || p.NAME_DE || p.name || p.NAME || "");
+        const id = String(p.id || p.ID || name);
+
+        let lng = e.lngLat.lng;
+        let lat = e.lngLat.lat;
+        if (c.geometry && c.geometry.type === "Point" && Array.isArray(c.geometry.coordinates)) {
+          lng = c.geometry.coordinates[0];
+          lat = c.geometry.coordinates[1];
+        }
+
+        openPlacePopup({
+          id, name, kind: "city", level: currentLevel, placeLevel: "city", lng, lat
+        });
+
+      sendToParent({
+        type: "select",
+        payload: { id, name, kind: "city", level: currentLevel, placeLevel: "city", lng, lat }
+      });
+
+        return;
+      }
+    }
+
+    // 2) Polygon click (EU/DE/CZ)
+    const polyLayers =
+      (currentLevel === "germany") ? ["de-states-fill"] :
+      (currentLevel === "czechia") ? ["cz-regions-fill"] :
+      ["eu-countries-fill"];
+
+    if (!polyLayers.every(id => map.getLayer(id))) return;
+
+    const feats = map.queryRenderedFeatures(e.point, { layers: polyLayers });
+    if (!feats.length) return;
+
+    const f = feats[0];
+    const p = f.properties || {};
+    const fid = (f.id !== undefined && f.id !== null) ? f.id : null;
+
+    if (fid !== null) {
+      if (currentLevel === "europe") setSelectedEU(fid);
+      if (currentLevel === "germany") setSelectedDE(fid);
+      if (currentLevel === "czechia") setSelectedCZ(fid);
+    }
+
+    const name =
+      (currentLevel === "czechia")
+        ? String(p.name_de || p.name_en || p.name || p.NAME_DE || p.NAME_EN || p.NAME || "")
+        : (currentLevel === "germany")
+          ? String(p.NAME_1 || p.NAME_DE || p.NAME || p.name_de || p.name || "")
+          : String(p.NAME_DE || p.NAME || p.name_de || p.name || "");
+
+    const id =
+      (currentLevel === "czechia")
+        ? String(p.place_id || p.iso_3166_2 || p.ISO_3166_2 || fid || name)
+        : (currentLevel === "europe")
+          ? (pickCountryId(p) || String(name))
+          : String(p.iso_3166_2 || p.ISO_3166_2 || name);
+
+    const [centerLng, centerLat] = getInnerPointForArea(currentLevel, p, e.lngLat);
+
+    const placeLevel =
+      (currentLevel === "europe") ? "country" :
+      (currentLevel === "germany") ? "region" :
+      (currentLevel === "czechia") ? "region" :
+      "region";
+
+    openPlacePopup({
+      id,
+      name,
+      kind: "area",
+      level: currentLevel,
+      placeLevel,
+      lng: centerLng,
+      lat: centerLat
+    });
+
+    sendToParent({
+      type: "select",
+      payload: { id, name, kind: "area", level: currentLevel, placeLevel, lng: centerLng, lat: centerLat }
+    });
+  });
+
+  // ===== Bubble -> Map messages =====
+  window.addEventListener("message", (ev) => {
+    const msg = ev.data;
+    if (!msg || typeof msg !== "object") return;
+
+    if (msg.type === "setLevel") {
+      const keepView =
+        !!msg.keepView ||
+        !!(msg.options && msg.options.keepView) ||
+        !!(msg.opts && msg.opts.keepView);
+
+      setLevel(msg.level, { keepView });
+      return;
+    }
+
+    if (msg.type === "setMode") {
+      if (msg.mode === "sequence" || msg.mode === "explore") {
+        tripMode = msg.mode;
+      }
+      return;
+    }
+
+    if (msg.type === "flyTo") {
+      if (Number.isFinite(msg.lng) && Number.isFinite(msg.lat)) {
+        map.flyTo({
+          center: [msg.lng, msg.lat],
+          zoom: msg.zoom || (currentLevel === "germany" ? 6.5 : (currentLevel === "czechia" ? 7.0 : 4.5)),
+          duration: 900
+        });
+        setTimeout(() => redrawAll(), 120);
+      }
+      return;
+    }
+
+    if (msg.type === "setSelected") {
+      selected = msg.selected || { start: null, stops: [], end: null };
+      updateFlagsGeojson();
+      return;
+    }
+
+    if (msg.type === "setRoute") {
+      lastRouteStops = [];
+      setRouteLineOnMap(msg.stops || []);
+      redrawAll();
+      return;
+    }
+
+    if (msg.type === "showSearchSelection") {
+      const p = msg.payload || {};
+      if (!Number.isFinite(p.lng) || !Number.isFinite(p.lat)) return;
+
+      setSearchSelectionOnMap(p.lng, p.lat, p.name);
+      openPlacePopup({
+        id: String(p.id || ""),
+        name: String(p.name || ""),
+        kind: String(p.kind || "place"),
+        level: currentLevel,
+        placeLevel: String(p.placeLevel || "city"),
+        lng: p.lng,
+        lat: p.lat
+      });
+      return;
+    }
+
+    if (msg.type === "clearSearchSelection") {
+      clearSearchSelectionOnMap();
+      closePlacePopup();
+      return;
+    }
+
+    if (msg.type === "setExploreStates") {
+      applyExploreStates(msg.level || currentLevel, msg.must || [], msg.never || []);
+      return;
+    }
+  });
+
+  map.on("load", async () => {
+    redrawAll();
+    await loadInnerPoints();
+
+    await addIconSafe("flag-start", "./flag_start.png");
+    await addIconSafe("flag-stop", "./flag_stop.png");
+    await addIconSafe("flag-end", "./flag_end.png");
+    await addIconSafe("search-flag", "./search_flag.png");
+
+    setLevel(currentLevel);
+    updateFlagsGeojson();
+    drawRouteArrows();
+
+    setTimeout(() => redrawAll(), 250);
+
+    if (pendingSearchSelection) {
+      const p = pendingSearchSelection;
+      pendingSearchSelection = null;
+      setSearchSelectionOnMap(p.lng, p.lat, p.name);
+    }
+  });
+
+  window.addEventListener("message", (ev) => {
+    if (ev.data && ev.data.type === "forceResize") {
+      try { map.resize(); } catch(e) {}
+      try { redrawAll(); } catch(e) {}
+    }
+  });
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

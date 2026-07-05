@@ -1,0 +1,16 @@
+{
+"type": "FeatureCollection",
+"name": "cities_ISL",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "NAME": "Reykjavík", "ADM0_A3": "ISL", "ADM1NAME": "Suðurnes", "POP_MAX": 166212, "FEATURECLA": "Admin-0 capital" }, "geometry": { "type": "Point", "coordinates": [ -21.936546009025054, 64.143459463170331 ] } },
+{ "type": "Feature", "properties": { "NAME": "Akureyri", "ADM0_A3": "ISL", "ADM1NAME": "Akureyri", "POP_MAX": 16563, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ -18.1000169, 65.6665719 ] } },
+{ "type": "Feature", "properties": { "NAME": "Keflavík", "ADM0_A3": "ISL", "ADM1NAME": "Suðurnes", "POP_MAX": 7930, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ -22.5665918, 64.0166467 ] } },
+{ "type": "Feature", "properties": { "NAME": "Selfoss", "ADM0_A3": "ISL", "ADM1NAME": "Biskupstungnahreppur", "POP_MAX": 6275, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ -20.996946, 63.9334219 ] } },
+{ "type": "Feature", "properties": { "NAME": "Sauðárkrókur", "ADM0_A3": "ISL", "ADM1NAME": "Akrahreppur", "POP_MAX": 2682, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ -19.6389928, 65.746412 ] } },
+{ "type": "Feature", "properties": { "NAME": "Ísafjörður", "ADM0_A3": "ISL", "ADM1NAME": "Vestfirðir", "POP_MAX": 2534, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ -23.1499671, 66.0833165 ] } },
+{ "type": "Feature", "properties": { "NAME": "Egilsstaðir", "ADM0_A3": "ISL", "ADM1NAME": "Austur-Hérað", "POP_MAX": 2265, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ -14.3949976, 65.2674231 ] } },
+{ "type": "Feature", "properties": { "NAME": "Borgarnes", "ADM0_A3": "ISL", "ADM1NAME": "Vesturland", "POP_MAX": 1783, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ -21.8623222, 64.5695028 ] } },
+{ "type": "Feature", "properties": { "NAME": "Höfn", "ADM0_A3": "ISL", "ADM1NAME": "Sveitarfélagið Hornafjörður", "POP_MAX": 1695, "FEATURECLA": "Populated place" }, "geometry": { "type": "Point", "coordinates": [ -15.2138595, 64.2723151 ] } }
+]
+}

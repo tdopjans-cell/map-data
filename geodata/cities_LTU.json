@@ -1,0 +1,12 @@
+{
+"type": "FeatureCollection",
+"name": "cities_LTU",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "NAME": "Vilnius", "ADM0_A3": "LTU", "ADM1NAME": "Vilniaus", "POP_MAX": 542366, "FEATURECLA": "Admin-0 capital" }, "geometry": { "type": "Point", "coordinates": [ 25.3166353, 54.6833663 ] } },
+{ "type": "Feature", "properties": { "NAME": "Kaunas", "ADM0_A3": "LTU", "ADM1NAME": "Kauno", "POP_MAX": 374643, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 23.8800305, 54.9504043 ] } },
+{ "type": "Feature", "properties": { "NAME": "Klaipėda", "ADM0_A3": "LTU", "ADM1NAME": "Klaipedos", "POP_MAX": 192307, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 21.1199406, 55.720409 ] } },
+{ "type": "Feature", "properties": { "NAME": "Šiauliai", "ADM0_A3": "LTU", "ADM1NAME": "Šiauliai", "POP_MAX": 133528, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 23.3250256, 55.9386385 ] } },
+{ "type": "Feature", "properties": { "NAME": "Panevežys", "ADM0_A3": "LTU", "ADM1NAME": "Panevezio", "POP_MAX": 127405, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 24.3700264, 55.7400202 ] } }
+]
+}

@@ -1,0 +1,342 @@
+{
+
+"step": "1",
+
+"trip_id": "de9fec49-61c5-417f-a79a-08078ba3bb04",
+
+"rerun_id": "unknown",
+
+"step1a": {
+
+"rerun_id": "unknown",
+
+"trip_id": "de9fec49-61c5-417f-a79a-08078ba3bb04",
+
+"target_container_stop_id": null,
+
+"new_stops": [
+
+{
+
+"place_name": "Köln",
+
+"place_level": "city",
+
+"lat": 50.9375,
+
+"lng": 6.9603,
+
+"planned_days": 3,
+
+"parent_stop_id": "10071863-a451-4b87-92e2-25c03f90ade7",
+
+"sequence_index": 1,
+
+"stop_type": "place",
+
+"is_ai_generated": true,
+
+"source": "ai",
+
+"ai_reasoning": "Köln erfüllt die NRW-Präferenz, passt zu Kulturfokus und liegt geografisch plausibel innerhalb des Deutschland-Containers."
+
+},
+
+{
+
+"place_name": "Düsseldorf",
+
+"place_level": "city",
+
+"lat": 51.2277,
+
+"lng": 6.7735,
+
+"planned_days": 2,
+
+"parent_stop_id": "10071863-a451-4b87-92e2-25c03f90ade7",
+
+"sequence_index": 2,
+
+"stop_type": "place",
+
+"is_ai_generated": true,
+
+"source": "ai",
+
+"ai_reasoning": "Düsseldorf ergänzt Köln innerhalb Nordrhein-Westfalens mit Kunst, Altstadt und Rheinlage ohne zusätzliche große Routensprünge."
+
+},
+
+{
+
+"place_name": "Münster",
+
+"place_level": "city",
+
+"lat": 51.9607,
+
+"lng": 7.6261,
+
+"planned_days": 1,
+
+"parent_stop_id": "10071863-a451-4b87-92e2-25c03f90ade7",
+
+"sequence_index": 3,
+
+"stop_type": "place",
+
+"is_ai_generated": true,
+
+"source": "ai",
+
+"ai_reasoning": "Münster ist ein kulturell passender NRW-Stopp mit historischer Altstadt und moderatem Reisetempo."
+
+},
+
+{
+
+"place_name": "Bonn",
+
+"place_level": "city",
+
+"lat": 50.7374,
+
+"lng": 7.0982,
+
+"planned_days": 2,
+
+"parent_stop_id": "10071863-a451-4b87-92e2-25c03f90ade7",
+
+"sequence_index": 4,
+
+"stop_type": "place",
+
+"is_ai_generated": true,
+
+"source": "ai",
+
+"ai_reasoning": "Bonn bleibt innerhalb der NRW-Präferenz und ergänzt die Route mit Museen, Beethoven-Bezug und Rheinlandschaft."
+
+},
+
+{
+
+"place_name": "Toruń",
+
+"place_level": "city",
+
+"lat": 53.0138,
+
+"lng": 18.5984,
+
+"planned_days": 2,
+
+"parent_stop_id": "889f0801-68c4-4fe1-a1b7-5fcb2f2878f3",
+
+"sequence_index": 1,
+
+"stop_type": "place",
+
+"is_ai_generated": true,
+
+"source": "ai",
+
+"ai_reasoning": "Toruń liegt in Kujawien-Pommern, passt zum bestehenden PL-KP-Bezug und bietet eine starke kulturhistorische Altstadt."
+
+},
+
+{
+
+"place_name": "Bydgoszcz",
+
+"place_level": "city",
+
+"lat": 53.1235,
+
+"lng": 18.0084,
+
+"planned_days": 1,
+
+"parent_stop_id": "889f0801-68c4-4fe1-a1b7-5fcb2f2878f3",
+
+"sequence_index": 2,
+
+"stop_type": "place",
+
+"is_ai_generated": true,
+
+"source": "ai",
+
+"ai_reasoning": "Bydgoszcz ergänzt Toruń nahegelegen innerhalb PL-KP und vermeidet unnötige Transfers."
+
+},
+
+{
+
+"place_name": "Danzig",
+
+"place_level": "city",
+
+"lat": 54.352,
+
+"lng": 18.6466,
+
+"planned_days": 2,
+
+"parent_stop_id": "889f0801-68c4-4fe1-a1b7-5fcb2f2878f3",
+
+"sequence_index": 3,
+
+"stop_type": "place",
+
+"is_ai_generated": true,
+
+"source": "ai",
+
+"ai_reasoning": "Danzig ist ein realer, kulturell starker Polen-Stopp mit historischer Altstadt und plausibler Nordroute."
+
+},
+
+{
+
+"place_name": "Paris",
+
+"place_level": "city",
+
+"lat": 48.8566,
+
+"lng": 2.3522,
+
+"planned_days": 4,
+
+"parent_stop_id": "6b017a41-bf5a-4608-b53f-bb15fac3d801",
+
+"sequence_index": 1,
+
+"stop_type": "place",
+
+"is_ai_generated": true,
+
+"source": "ai",
+
+"ai_reasoning": "Paris passt zum FR-75-Bezug, zum Kulturfokus und rechtfertigt als Hauptziel mehrere Reisetage."
+
+},
+
+{
+
+"place_name": "Versailles",
+
+"place_level": "city",
+
+"lat": 48.8049,
+
+"lng": 2.1204,
+
+"planned_days": 1,
+
+"parent_stop_id": "6b017a41-bf5a-4608-b53f-bb15fac3d801",
+
+"sequence_index": 2,
+
+"stop_type": "place",
+
+"is_ai_generated": true,
+
+"source": "ai",
+
+"ai_reasoning": "Versailles ist als kulturhistorische Ergänzung zu Paris geografisch sehr nahe und transferarm."
+
+},
+
+{
+
+"place_name": "Lyon",
+
+"place_level": "city",
+
+"lat": 45.764,
+
+"lng": 4.8357,
+
+"planned_days": 1,
+
+"parent_stop_id": "6b017a41-bf5a-4608-b53f-bb15fac3d801",
+
+"sequence_index": 3,
+
+"stop_type": "place",
+
+"is_ai_generated": true,
+
+"source": "ai",
+
+"ai_reasoning": "Lyon ergänzt Frankreich mit Altstadt, Gastronomie und Kultur, ohne verbotene Länder zu berühren."
+
+},
+
+{
+
+"place_name": "Amsterdam",
+
+"place_level": "city",
+
+"lat": 52.3676,
+
+"lng": 4.9041,
+
+"planned_days": 2,
+
+"parent_stop_id": null,
+
+"sequence_index": 4,
+
+"stop_type": "container",
+
+"is_ai_generated": true,
+
+"source": "ai",
+
+"ai_reasoning": "Amsterdam nutzt die unallocated_days sinnvoll als zusätzlicher Kulturstopp zwischen Deutschland und Frankreich, ohne Schweiz oder Luxemburg einzubeziehen."
+
+}
+
+],
+
+"days_used": 21,
+
+"days_remaining": 0,
+
+"warnings": [
+
+{
+
+"type": "sequence_inferred",
+
+"message": "Mehrere bestehende child_stops enthalten keinen sequence_index; die Array-Reihenfolge wurde intern als Sequenz verwendet."
+
+},
+
+{
+
+"type": "runtime_metadata_missing",
+
+"message": "runtime.rerun_id, runtime.model und runtime.generated_at fehlen im Input; Standardwerte wurden verwendet."
+
+}
+
+],
+
+"meta": {
+
+"model": "unknown",
+
+"prompt_version": "v0.1",
+
+"generated_at": null
+
+}
+
+}
+}
