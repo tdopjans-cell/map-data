@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_NSV", "features": [{"type": "Feature", "properties": {"iso_3166_2": "NO-21", "NAME": "Spitzbergen", "NAME_EN": "Svalbard"}, "geometry": {"type": "Point", "coordinates": [17.327872, 78.319037]}}]}

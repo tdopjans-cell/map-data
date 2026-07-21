@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "cities_BRN", "features": [{"type": "Feature", "properties": {"NAME": "Bandar Seri Begawan", "NAME_EN": "Bandar Seri Begawan", "SCALERANK": 3}, "geometry": {"type": "Point", "coordinates": [114.933284, 4.883331]}}]}

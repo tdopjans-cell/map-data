@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "cities_KIR", "features": [{"type": "Feature", "properties": {"NAME": "South Tarawa", "NAME_EN": "South Tarawa", "SCALERANK": 6}, "geometry": {"type": "Point", "coordinates": [173.017571, 1.338188]}}]}

@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_IOT", "features": [{"type": "Feature", "properties": {"iso_3166_2": "IO-X01~", "NAME": "Britisches Territorium im Indischen Ozean", "NAME_EN": "British Indian Ocean Territory"}, "geometry": {"type": "Point", "coordinates": [72.434904, -7.355727]}}]}

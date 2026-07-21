@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_SXM", "features": [{"type": "Feature", "properties": {"iso_3166_2": "NL-SX", "NAME": "Sint Maarten", "NAME_EN": "Sint Maarten"}, "geometry": {"type": "Point", "coordinates": [-63.069541, 18.039496]}}]}

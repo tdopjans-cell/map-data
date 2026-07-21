@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_MTQ", "features": [{"type": "Feature", "properties": {"iso_3166_2": "FR-MQ", "NAME": "Martinique", "NAME_EN": "Martinique"}, "geometry": {"type": "Point", "coordinates": [-61.018149, 14.644334]}}]}

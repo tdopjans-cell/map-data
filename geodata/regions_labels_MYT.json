@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_MYT", "features": [{"type": "Feature", "properties": {"iso_3166_2": "FR-YT", "NAME": "Mayotte", "NAME_EN": "Mayotte"}, "geometry": {"type": "Point", "coordinates": [45.14498, -12.82171]}}]}

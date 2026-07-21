@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_ATC", "features": [{"type": "Feature", "properties": {"iso_3166_2": "AU-X04~", "NAME": "Ashmore- und Cartierinseln", "NAME_EN": "Ashmore and Cartier Islands"}, "geometry": {"type": "Point", "coordinates": [123.586347, -12.43255]}}]}

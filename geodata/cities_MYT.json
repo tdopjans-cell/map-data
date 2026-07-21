@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "cities_MYT", "features": [{"type": "Feature", "properties": {"NAME": "Dzaoudzi", "NAME_EN": "Dzaoudzi", "SCALERANK": 7}, "geometry": {"type": "Point", "coordinates": [45.275004, -12.787089]}}]}

@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_SAH", "features": [{"type": "Feature", "properties": {"iso_3166_2": "EH-X01~", "NAME": "Westsahara", "NAME_EN": "Western Sahara"}, "geometry": {"type": "Point", "coordinates": [-12.592972, 24.200256]}}]}

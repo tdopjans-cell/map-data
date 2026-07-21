@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_PCN", "features": [{"type": "Feature", "properties": {"iso_3166_2": "PN-X01~", "NAME": "Pitcairninseln", "NAME_EN": "Pitcairn Islands"}, "geometry": {"type": "Point", "coordinates": [-128.316888, -24.368707]}}]}

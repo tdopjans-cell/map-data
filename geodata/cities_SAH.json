@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "cities_SAH", "features": [{"type": "Feature", "properties": {"NAME": "Bir Lehlu", "NAME_EN": "Bir Lehlou", "SCALERANK": 6}, "geometry": {"type": "Point", "coordinates": [-9.652522, 26.119167]}}]}

@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "cities_BRB", "features": [{"type": "Feature", "properties": {"NAME": "Bridgetown", "NAME_EN": "Bridgetown", "SCALERANK": 4}, "geometry": {"type": "Point", "coordinates": [-59.616527, 13.102003]}}]}

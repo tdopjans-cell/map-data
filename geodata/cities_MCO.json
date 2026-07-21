@@ -1,8 +1,1 @@
-{
-"type": "FeatureCollection",
-"name": "cities_MCO",
-"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
-"features": [
-{ "type": "Feature", "properties": { "NAME": "Monaco", "ADM0_A3": "MCO", "ADM1NAME": null, "POP_MAX": 36371, "FEATURECLA": "Admin-0 capital" }, "geometry": { "type": "Point", "coordinates": [ 7.4069132, 43.7396457 ] } }
-]
-}
+{"type": "FeatureCollection", "name": "cities_MCO", "features": [{"type": "Feature", "properties": {"NAME": "Monaco", "NAME_EN": "Monaco", "SCALERANK": 6}, "geometry": {"type": "Point", "coordinates": [7.406913, 43.739646]}}]}

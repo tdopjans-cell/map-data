@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "cities_MTQ", "features": [{"type": "Feature", "properties": {"NAME": "Fort-de-France", "NAME_EN": "Fort-de-France", "SCALERANK": 7}, "geometry": {"type": "Point", "coordinates": [-61.080029, 14.610412]}}]}

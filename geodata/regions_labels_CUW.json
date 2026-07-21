@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_CUW", "features": [{"type": "Feature", "properties": {"iso_3166_2": "CW-X01~", "NAME": "Curaçao", "NAME_EN": "Curaçao"}, "geometry": {"type": "Point", "coordinates": [-69.034533, 12.212063]}}]}

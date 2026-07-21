@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_JEY", "features": [{"type": "Feature", "properties": {"iso_3166_2": "JE-X01~", "NAME": "Jersey", "NAME_EN": "Jersey"}, "geometry": {"type": "Point", "coordinates": [-2.122384, 49.218329]}}]}

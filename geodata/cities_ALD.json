@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "cities_ALD", "features": [{"type": "Feature", "properties": {"NAME": "Mariehamn", "NAME_EN": "Mariehamn", "SCALERANK": 10}, "geometry": {"type": "Point", "coordinates": [19.949005, 60.096996]}}]}

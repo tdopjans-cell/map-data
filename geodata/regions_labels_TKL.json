@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_TKL", "features": [{"type": "Feature", "properties": {"iso_3166_2": "TK-X01~", "NAME": "Tokelau", "NAME_EN": "Tokelau"}, "geometry": {"type": "Point", "coordinates": [-171.19348, -9.347507]}}]}

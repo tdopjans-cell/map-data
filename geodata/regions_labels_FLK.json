@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_FLK", "features": [{"type": "Feature", "properties": {"iso_3166_2": "FK-X01~", "NAME": "Falklandinseln", "NAME_EN": "Falkland Islands"}, "geometry": {"type": "Point", "coordinates": [-58.613888, -51.794245]}}]}

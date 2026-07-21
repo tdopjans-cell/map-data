@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "cities_PYF", "features": [{"type": "Feature", "properties": {"NAME": "Papeete", "NAME_EN": "Papeete", "SCALERANK": 4}, "geometry": {"type": "Point", "coordinates": [-149.566669, -17.533363]}}]}

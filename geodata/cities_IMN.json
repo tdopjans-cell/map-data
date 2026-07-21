@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "cities_IMN", "features": [{"type": "Feature", "properties": {"NAME": "Douglas", "NAME_EN": "Douglas", "SCALERANK": 7}, "geometry": {"type": "Point", "coordinates": [-4.480269, 54.149122]}}]}

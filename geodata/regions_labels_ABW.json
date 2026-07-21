@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_ABW", "features": [{"type": "Feature", "properties": {"iso_3166_2": "AW-X01~", "NAME": "Aruba", "NAME_EN": "Aruba"}, "geometry": {"type": "Point", "coordinates": [-69.984937, 12.527045]}}]}

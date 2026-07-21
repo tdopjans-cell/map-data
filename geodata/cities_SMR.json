@@ -1,8 +1,1 @@
-{
-"type": "FeatureCollection",
-"name": "cities_SMR",
-"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
-"features": [
-{ "type": "Feature", "properties": { "NAME": "San Marino", "ADM0_A3": "SMR", "ADM1NAME": null, "POP_MAX": 29579, "FEATURECLA": "Admin-0 capital" }, "geometry": { "type": "Point", "coordinates": [ 12.4417702, 43.9360958 ] } }
-]
-}
+{"type": "FeatureCollection", "name": "cities_SMR", "features": [{"type": "Feature", "properties": {"NAME": "San Marino", "NAME_EN": "San Marino", "SCALERANK": 7}, "geometry": {"type": "Point", "coordinates": [12.44177, 43.936096]}}]}

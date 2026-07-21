@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "cities_TCA", "features": [{"type": "Feature", "properties": {"NAME": "Cockburn Town", "NAME_EN": "Cockburn Town", "SCALERANK": 7}, "geometry": {"type": "Point", "coordinates": [-71.135979, 21.466427]}}]}

@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "cities_BMU", "features": [{"type": "Feature", "properties": {"NAME": "Hamilton", "NAME_EN": "Hamilton", "SCALERANK": 3}, "geometry": {"type": "Point", "coordinates": [-64.783937, 32.29419]}}]}

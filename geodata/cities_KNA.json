@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "cities_KNA", "features": [{"type": "Feature", "properties": {"NAME": "Basseterre", "NAME_EN": "Basseterre", "SCALERANK": 4}, "geometry": {"type": "Point", "coordinates": [-62.717009, 17.302031]}}]}

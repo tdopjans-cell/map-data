@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "cities_VCT", "features": [{"type": "Feature", "properties": {"NAME": "Kingstown", "NAME_EN": "Kingstown", "SCALERANK": 4}, "geometry": {"type": "Point", "coordinates": [-61.220236, 13.155756]}}]}

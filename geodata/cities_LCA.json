@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "cities_LCA", "features": [{"type": "Feature", "properties": {"NAME": "Castries", "NAME_EN": "Castries", "SCALERANK": 4}, "geometry": {"type": "Point", "coordinates": [-60.992875, 14.007875]}}]}

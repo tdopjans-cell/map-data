@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_GUM", "features": [{"type": "Feature", "properties": {"iso_3166_2": "GU-X01~", "NAME": "Guam", "NAME_EN": "Guam"}, "geometry": {"type": "Point", "coordinates": [144.760552, 13.459622]}}]}

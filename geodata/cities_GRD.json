@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "cities_GRD", "features": [{"type": "Feature", "properties": {"NAME": "St. George’s", "NAME_EN": "St. George's", "SCALERANK": 4}, "geometry": {"type": "Point", "coordinates": [-61.741643, 12.052633]}}]}

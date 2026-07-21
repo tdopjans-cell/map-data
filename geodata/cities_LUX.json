@@ -1,10 +1,1 @@
-{
-"type": "FeatureCollection",
-"name": "cities_LUX",
-"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
-"features": [
-{ "type": "Feature", "properties": { "NAME": "Luxembourg", "ADM0_A3": "LUX", "ADM1NAME": "Luxembourg", "POP_MAX": 107260, "FEATURECLA": "Admin-0 capital" }, "geometry": { "type": "Point", "coordinates": [ 6.1300028, 49.6116604 ] } },
-{ "type": "Feature", "properties": { "NAME": "Diekirch", "ADM0_A3": "LUX", "ADM1NAME": "Diekirch", "POP_MAX": 6242, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 6.1667016, 49.8833011 ] } },
-{ "type": "Feature", "properties": { "NAME": "Grevenmacher", "ADM0_A3": "LUX", "ADM1NAME": "Grevenmacher", "POP_MAX": 3958, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 6.425599376387133, 49.67975296258291 ] } }
-]
-}
+{"type": "FeatureCollection", "name": "cities_LUX", "features": [{"type": "Feature", "properties": {"NAME": "Diekirch", "NAME_EN": "Diekirch", "SCALERANK": 10}, "geometry": {"type": "Point", "coordinates": [6.166702, 49.883301]}}, {"type": "Feature", "properties": {"NAME": "Grevenmacher", "NAME_EN": "Grevenmacher", "SCALERANK": 10}, "geometry": {"type": "Point", "coordinates": [6.425599, 49.679753]}}, {"type": "Feature", "properties": {"NAME": "Luxemburg", "NAME_EN": "Luxembourg", "SCALERANK": 6}, "geometry": {"type": "Point", "coordinates": [6.130003, 49.61166]}}]}

@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_IMN", "features": [{"type": "Feature", "properties": {"iso_3166_2": "IM-X01~", "NAME": "Isle of Man", "NAME_EN": "Isle of Man"}, "geometry": {"type": "Point", "coordinates": [-4.509971, 54.238654]}}]}

@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "cities_CYM", "features": [{"type": "Feature", "properties": {"NAME": "George Town", "NAME_EN": "George Town", "SCALERANK": 7}, "geometry": {"type": "Point", "coordinates": [-81.37157, 19.294748]}}]}

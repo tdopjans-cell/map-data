@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_REU", "features": [{"type": "Feature", "properties": {"iso_3166_2": "FR-RE", "NAME": "Réunion", "NAME_EN": "Réunion"}, "geometry": {"type": "Point", "coordinates": [55.544243, -21.119073]}}]}

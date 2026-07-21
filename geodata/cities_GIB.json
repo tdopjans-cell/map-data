@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "cities_GIB", "features": [{"type": "Feature", "properties": {"NAME": "Gibraltar", "NAME_EN": "Gibraltar", "SCALERANK": 6}, "geometry": {"type": "Point", "coordinates": [-5.346014, 36.128342]}}]}

@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "cities_FSM", "features": [{"type": "Feature", "properties": {"NAME": "Palikir", "NAME_EN": "Palikir", "SCALERANK": 6}, "geometry": {"type": "Point", "coordinates": [158.149974, 6.916644]}}]}

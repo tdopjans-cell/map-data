@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "cities_ABW", "features": [{"type": "Feature", "properties": {"NAME": "Oranjestad", "NAME_EN": "Oranjestad", "SCALERANK": 7}, "geometry": {"type": "Point", "coordinates": [-70.025526, 12.521503]}}]}

@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_GGY", "features": [{"type": "Feature", "properties": {"iso_3166_2": "GG-X01~", "NAME": "Sark", "NAME_EN": "Sark"}, "geometry": {"type": "Point", "coordinates": [-2.568465, 49.472846]}}]}

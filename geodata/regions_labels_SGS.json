@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_SGS", "features": [{"type": "Feature", "properties": {"iso_3166_2": "GS-X01~", "NAME": "Südgeorgien und die Südlichen Sandwichinseln", "NAME_EN": "South Georgia and the South Sandwich Islands"}, "geometry": {"type": "Point", "coordinates": [-36.492154, -54.429783]}}]}

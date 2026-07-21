@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_HMD", "features": [{"type": "Feature", "properties": {"iso_3166_2": "HM-X01~", "NAME": "Heard und McDonaldinseln", "NAME_EN": "Heard Island and McDonald Islands"}, "geometry": {"type": "Point", "coordinates": [73.522869, -53.082533]}}]}

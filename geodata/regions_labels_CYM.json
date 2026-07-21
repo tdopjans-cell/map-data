@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_CYM", "features": [{"type": "Feature", "properties": {"iso_3166_2": "KY-X01~", "NAME": "Kaimaninseln", "NAME_EN": "Cayman Islands"}, "geometry": {"type": "Point", "coordinates": [-81.181092, 19.329474]}}]}

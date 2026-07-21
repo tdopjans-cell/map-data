@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "cities_TKL", "features": [{"type": "Feature", "properties": {"NAME": "Atafu", "NAME_EN": "Atafu", "SCALERANK": 8}, "geometry": {"type": "Point", "coordinates": [-172.497665, -8.548618]}}]}

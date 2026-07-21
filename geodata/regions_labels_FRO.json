@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_FRO", "features": [{"type": "Feature", "properties": {"iso_3166_2": "FO-X00~", "NAME": "Eysturoy", "NAME_EN": "Eysturoy"}, "geometry": {"type": "Point", "coordinates": [-6.984786, 62.124945]}}]}

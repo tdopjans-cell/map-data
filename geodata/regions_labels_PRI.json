@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_PRI", "features": [{"type": "Feature", "properties": {"iso_3166_2": "US-PR", "NAME": "Puerto Rico", "NAME_EN": "Puerto Rico"}, "geometry": {"type": "Point", "coordinates": [-66.401489, 18.221162]}}]}

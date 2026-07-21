@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "cities_GUM", "features": [{"type": "Feature", "properties": {"NAME": "Hagåtña", "NAME_EN": "Hagåtña", "SCALERANK": 6}, "geometry": {"type": "Point", "coordinates": [144.750017, 13.470016]}}]}

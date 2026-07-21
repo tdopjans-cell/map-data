@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_GLP", "features": [{"type": "Feature", "properties": {"iso_3166_2": "FR-GP", "NAME": "Guadeloupe", "NAME_EN": "Guadeloupe"}, "geometry": {"type": "Point", "coordinates": [-61.669261, 16.153714]}}]}

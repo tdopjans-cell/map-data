@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_GUF", "features": [{"type": "Feature", "properties": {"iso_3166_2": "FR-GF", "NAME": "Französisch-Guayana", "NAME_EN": "French Guiana"}, "geometry": {"type": "Point", "coordinates": [-53.036559, 3.926028]}}]}

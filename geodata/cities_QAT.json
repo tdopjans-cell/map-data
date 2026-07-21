@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "cities_QAT", "features": [{"type": "Feature", "properties": {"NAME": "Doha", "NAME_EN": "Doha", "SCALERANK": 4}, "geometry": {"type": "Point", "coordinates": [51.532968, 25.286556]}}]}

@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_VAT", "features": [{"type": "Feature", "properties": {"iso_3166_2": "VA-X01~", "NAME": "Vatikan", "NAME_EN": "Vatican City"}, "geometry": {"type": "Point", "coordinates": [12.453377, 41.903227]}}]}

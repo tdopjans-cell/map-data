@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_MCO", "features": [{"type": "Feature", "properties": {"iso_3166_2": "MC-X01~", "NAME": "Monaco-Ville", "NAME_EN": "Monaco"}, "geometry": {"type": "Point", "coordinates": [7.402929, 43.741607]}}]}

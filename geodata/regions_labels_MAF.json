@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_MAF", "features": [{"type": "Feature", "properties": {"iso_3166_2": "MF-X00~", "NAME": "Saint-Martin", "NAME_EN": "Saint Martin"}, "geometry": {"type": "Point", "coordinates": [-63.0587, 18.076728]}}]}

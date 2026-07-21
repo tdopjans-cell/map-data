@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "cities_MNP", "features": [{"type": "Feature", "properties": {"NAME": "Capitol Hill", "NAME_EN": "Capitol Hill", "SCALERANK": 7}, "geometry": {"type": "Point", "coordinates": [145.750576, 15.211254]}}]}

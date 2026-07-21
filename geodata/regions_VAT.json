@@ -1,8 +1,1 @@
-{
-"type": "FeatureCollection",
-"name": "regions_VAT",
-"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
-"features": [
-{ "type": "Feature", "properties": { "iso_3166_2": "VA-X01~", "name": "Vatican", "name_de": "Vatikan", "adm0_a3": "VAT" }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 12.453031208000141, 41.903914738000125 ], [ 12.453982588000144, 41.903861884 ], [ 12.454035442000077, 41.902751941000091 ], [ 12.45313691700008, 41.902751941000091 ], [ 12.452714082000085, 41.903016213000015 ], [ 12.452766936000103, 41.903439049 ], [ 12.453031208000141, 41.903914738000125 ] ] ] } }
-]
-}
+{"type": "FeatureCollection", "name": "regions_VAT", "features": [{"type": "Feature", "properties": {"iso_3166_2": "VA-X01~", "NAME": "Vatikan", "NAME_EN": "Vatican City", "ADM0_A3": "VAT"}, "geometry": {"type": "Polygon", "coordinates": [[[12.453031, 41.903915], [12.453983, 41.903862], [12.454035, 41.902752], [12.453137, 41.902752], [12.452714, 41.903016], [12.452767, 41.903439], [12.453031, 41.903915]]]}}]}

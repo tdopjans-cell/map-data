@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_MAC", "features": [{"type": "Feature", "properties": {"iso_3166_2": "MO-M", "NAME": "Macau", "NAME_EN": "Macau"}, "geometry": {"type": "Point", "coordinates": [113.559433, 22.136176]}}]}

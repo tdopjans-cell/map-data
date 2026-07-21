@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "cities_ASM", "features": [{"type": "Feature", "properties": {"NAME": "Pago Pago", "NAME_EN": "Pago Pago", "SCALERANK": 4}, "geometry": {"type": "Point", "coordinates": [-170.706645, -14.276611]}}]}

@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "cities_NCL", "features": [{"type": "Feature", "properties": {"NAME": "Nouméa", "NAME_EN": "Noumea", "SCALERANK": 6}, "geometry": {"type": "Point", "coordinates": [166.444285, -22.262528]}}]}

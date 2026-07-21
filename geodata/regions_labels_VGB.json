@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_VGB", "features": [{"type": "Feature", "properties": {"iso_3166_2": "VG-X01~", "NAME": "Britische Jungferninseln", "NAME_EN": "British Virgin Islands"}, "geometry": {"type": "Point", "coordinates": [-64.641933, 18.418464]}}]}

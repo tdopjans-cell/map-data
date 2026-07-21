@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_NFK", "features": [{"type": "Feature", "properties": {"iso_3166_2": "NF-X01~", "NAME": "Norfolkinsel", "NAME_EN": "Norfolk Island"}, "geometry": {"type": "Point", "coordinates": [167.956946, -29.039483]}}]}

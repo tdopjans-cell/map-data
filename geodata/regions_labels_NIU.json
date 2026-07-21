@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "regions_labels_NIU", "features": [{"type": "Feature", "properties": {"iso_3166_2": "NU-X01~", "NAME": "Niue", "NAME_EN": "Niue"}, "geometry": {"type": "Point", "coordinates": [-169.864314, -19.058038]}}]}

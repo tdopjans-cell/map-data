@@ -1,10 +1,1 @@
-{
-"type": "FeatureCollection",
-"name": "cities_MKD",
-"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
-"features": [
-{ "type": "Feature", "properties": { "NAME": "Skopje", "ADM0_A3": "MKD", "ADM1NAME": "Centar", "POP_MAX": 494087, "FEATURECLA": "Admin-0 capital" }, "geometry": { "type": "Point", "coordinates": [ 21.4334615, 42.0000061 ] } },
-{ "type": "Feature", "properties": { "NAME": "Tetovo", "ADM0_A3": "MKD", "ADM1NAME": "Tetovo", "POP_MAX": 119132, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 20.9700789, 42.0092304 ] } },
-{ "type": "Feature", "properties": { "NAME": "Bitola", "ADM0_A3": "MKD", "ADM1NAME": "Bitola", "POP_MAX": 86528, "FEATURECLA": "Admin-1 capital" }, "geometry": { "type": "Point", "coordinates": [ 21.3395137, 41.039057 ] } }
-]
-}
+{"type": "FeatureCollection", "name": "cities_MKD", "features": [{"type": "Feature", "properties": {"NAME": "Tetovo", "NAME_EN": "Tetovo", "SCALERANK": 8}, "geometry": {"type": "Point", "coordinates": [20.970079, 42.00923]}}, {"type": "Feature", "properties": {"NAME": "Bitola", "NAME_EN": "Bitola", "SCALERANK": 7}, "geometry": {"type": "Point", "coordinates": [21.339514, 41.039057]}}, {"type": "Feature", "properties": {"NAME": "Skopje", "NAME_EN": "Skopje", "SCALERANK": 4}, "geometry": {"type": "Point", "coordinates": [21.433461, 42.000006]}}]}

@@ -1,14 +1,1 @@
-{
-"type": "FeatureCollection",
-"name": "cities_SRB",
-"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
-"features": [
-{ "type": "Feature", "properties": { "NAME": "Belgrade", "ADM0_A3": "SRB", "ADM1NAME": "Grad Beograd", "POP_MAX": 1099000, "FEATURECLA": "Admin-0 capital" }, "geometry": { "type": "Point", "coordinates": [ 20.4660448, 44.8205913 ] } },
-{ "type": "Feature", "properties": { "NAME": "Niš", "ADM0_A3": "SRB", "ADM1NAME": "Nišavski", "POP_MAX": 250000, "FEATURECLA": "Populated place" }, "geometry": { "type": "Point", "coordinates": [ 21.8999963, 43.3304159 ] } },
-{ "type": "Feature", "properties": { "NAME": "Novi Sad", "ADM0_A3": "SRB", "ADM1NAME": "Južno-Backi", "POP_MAX": 225457, "FEATURECLA": "Admin-0 region capital" }, "geometry": { "type": "Point", "coordinates": [ 19.8499406, 45.2503762 ] } },
-{ "type": "Feature", "properties": { "NAME": "Kragujevac", "ADM0_A3": "SRB", "ADM1NAME": "Šumadijski", "POP_MAX": 171197, "FEATURECLA": "Populated place" }, "geometry": { "type": "Point", "coordinates": [ 20.9200044, 44.0199603 ] } },
-{ "type": "Feature", "properties": { "NAME": "Čačak", "ADM0_A3": "SRB", "ADM1NAME": "Moravicki", "POP_MAX": 170000, "FEATURECLA": "Populated place" }, "geometry": { "type": "Point", "coordinates": [ 20.330118, 43.8897357 ] } },
-{ "type": "Feature", "properties": { "NAME": "Subotica", "ADM0_A3": "SRB", "ADM1NAME": "Severno-Backi", "POP_MAX": 100000, "FEATURECLA": "Populated place" }, "geometry": { "type": "Point", "coordinates": [ 19.6800284, 46.0700161 ] } },
-{ "type": "Feature", "properties": { "NAME": "Zrenjanin", "ADM0_A3": "SRB", "ADM1NAME": "Srednje-Banatski", "POP_MAX": 64053, "FEATURECLA": "Populated place" }, "geometry": { "type": "Point", "coordinates": [ 20.3994677, 45.3786371 ] } }
-]
-}
+{"type": "FeatureCollection", "name": "cities_SRB", "features": [{"type": "Feature", "properties": {"NAME": "Subotica", "NAME_EN": "Subotica", "SCALERANK": 8}, "geometry": {"type": "Point", "coordinates": [19.680028, 46.070016]}}, {"type": "Feature", "properties": {"NAME": "Kragujevac", "NAME_EN": "Kragujevac", "SCALERANK": 8}, "geometry": {"type": "Point", "coordinates": [20.920004, 44.01996]}}, {"type": "Feature", "properties": {"NAME": "Zrenjanin", "NAME_EN": "Zrenjanin", "SCALERANK": 8}, "geometry": {"type": "Point", "coordinates": [20.399468, 45.378637]}}, {"type": "Feature", "properties": {"NAME": "Čačak", "NAME_EN": "Čačak", "SCALERANK": 7}, "geometry": {"type": "Point", "coordinates": [20.330118, 43.889736]}}, {"type": "Feature", "properties": {"NAME": "Niš", "NAME_EN": "Niš", "SCALERANK": 7}, "geometry": {"type": "Point", "coordinates": [21.899996, 43.330416]}}, {"type": "Feature", "properties": {"NAME": "Neusatz", "NAME_EN": "Novi Sad", "SCALERANK": 7}, "geometry": {"type": "Point", "coordinates": [19.849941, 45.250376]}}, {"type": "Feature", "properties": {"NAME": "Belgrad", "NAME_EN": "Belgrade", "SCALERANK": 3}, "geometry": {"type": "Point", "coordinates": [20.466045, 44.820591]}}]}

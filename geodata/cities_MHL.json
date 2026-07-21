@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "cities_MHL", "features": [{"type": "Feature", "properties": {"NAME": "Majuro", "NAME_EN": "Majuro", "SCALERANK": 6}, "geometry": {"type": "Point", "coordinates": [171.38, 7.103004]}}]}
