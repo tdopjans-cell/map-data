@@ -1,9 +1,0 @@
-{
-"type": "FeatureCollection",
-"name": "cities_SVN",
-"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
-"features": [
-{ "type": "Feature", "properties": { "NAME": "Ljubljana", "ADM0_A3": "SVN", "ADM1NAME": "Osrednjeslovenska", "POP_MAX": 314807, "FEATURECLA": "Admin-0 capital" }, "geometry": { "type": "Point", "coordinates": [ 14.514969, 46.0552883 ] } },
-{ "type": "Feature", "properties": { "NAME": "Maribor", "ADM0_A3": "SVN", "ADM1NAME": "Maribor", "POP_MAX": 114228, "FEATURECLA": "Populated place" }, "geometry": { "type": "Point", "coordinates": [ 15.6500419, 46.5404783 ] } }
-]
-}
