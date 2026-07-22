@@ -49,3 +49,20 @@ app.*.map.json
 /android/app/release
 
 way2gox-web/
+
+# App-/Build-Artefakte gehören NICHT in den Datenspeicher
+lib/
+ios/
+android/
+windows/
+web/
+test/
+.vscode/
+.dart_tool/
+build/
+flutter/
+pubspec.yaml
+pubspec.lock
+.metadata
+analysis_options.yaml
+.flutter-plugins-dependencies
