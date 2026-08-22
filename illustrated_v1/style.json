@@ -1,0 +1,139 @@
+{
+  "version": 8,
+  "name": "Way2GoX Illustrated Europe",
+  "metadata": {
+    "way2gox:notes": "Runtime style illustrated_v1. Presentation only; functional Way2GoX layers are added by the app.",
+    "way2gox:icons": "Sprite-Iconnamen (= 'type' in decorations.geojson): mountain, pines, castle, balloon. 'paper' ist die Textur fuer background-pattern. Illustrator ersetzt die PNGs unter selben Namen.",
+    "way2gox:next": "Hero-Regionen (z.B. Alpen) spaeter als handgemalter Raster-Akzent-Layer OBERHALB von 'hillshade' additiv einhaengen."
+  },
+  "sprite": "https://leafy-selkie-49eae2.netlify.app/illustrated_v1/sprites/way2gox-decorations",
+  "glyphs": "https://api.maptiler.com/fonts/{fontstack}/{range}.pbf?key=bq7edtBllgSIwDJY9mGU",
+  "sources": {
+    "maptiler_vector": {
+      "type": "vector",
+      "url": "https://api.maptiler.com/tiles/v3/tiles.json?key=bq7edtBllgSIwDJY9mGU"
+    },
+    "terrain_dem": {
+      "type": "raster-dem",
+      "url": "https://api.maptiler.com/tiles/terrain-rgb-v2/tiles.json?key=bq7edtBllgSIwDJY9mGU",
+      "encoding": "mapbox"
+    },
+    "decorations": {
+      "type": "geojson",
+      "data": "https://leafy-selkie-49eae2.netlify.app/illustrated_v1/decorations.geojson"
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "metadata": { "note": "Papier-Grain via background-pattern (screen-space). background-color ist Fallback, falls das Sprite noch fehlt." },
+      "paint": {
+        "background-color": "#F4EFE4",
+        "background-pattern": "paper"
+      }
+    },
+    {
+      "id": "landcover",
+      "type": "fill",
+      "source": "maptiler_vector",
+      "source-layer": "landcover",
+      "metadata": { "note": "Storybook-Tints aus Daten, halbtransparent -> Papier scheint durch. 'class'-Werte ggf. an Tileset anpassen." },
+      "paint": {
+        "fill-antialias": true,
+        "fill-opacity": 0.72,
+        "fill-color": [
+          "match", ["get", "class"],
+          "wood", "#8FBF88",
+          "forest", "#8FBF88",
+          "tree", "#8FBF88",
+          "scrub", "#BFCF95",
+          "grass", "#C4DBA0",
+          "grassland", "#C4DBA0",
+          "farmland", "#CFE0AE",
+          "crop", "#CFE0AE",
+          "wetland", "#A9C7B0",
+          "rock", "#D9C9A8",
+          "sand", "#E6D6A8",
+          "ice", "#EDEFF0",
+          "snow", "#EDEFF0",
+          "#CFE0AE"
+        ]
+      }
+    },
+    {
+      "id": "hillshade",
+      "type": "hillshade",
+      "source": "terrain_dem",
+      "metadata": { "note": "Weiches, warmes Relief. Hero-Raster-Akzente kommen spaeter DIREKT hierueber." },
+      "paint": {
+        "hillshade-exaggeration": 0.4,
+        "hillshade-shadow-color": "#6E5B44",
+        "hillshade-highlight-color": "#FFFBF0",
+        "hillshade-accent-color": "#9C8B6E"
+      }
+    },
+    {
+      "id": "water",
+      "type": "fill",
+      "source": "maptiler_vector",
+      "source-layer": "water",
+      "paint": {
+        "fill-antialias": true,
+        "fill-opacity": 0.9,
+        "fill-color": [
+          "match", ["get", "class"],
+          "ocean", "#A8D2DE",
+          "lake", "#B4DBE6",
+          "river", "#AFD6E2",
+          "#AED3DF"
+        ]
+      }
+    },
+    {
+      "id": "waterway",
+      "type": "line",
+      "source": "maptiler_vector",
+      "source-layer": "waterway",
+      "paint": {
+        "line-color": "#8FC0CE",
+        "line-opacity": 0.8,
+        "line-width": ["interpolate", ["linear"], ["zoom"], 6, 0.5, 12, 2]
+      }
+    },
+    {
+      "id": "decorations-overview",
+      "type": "symbol",
+      "source": "decorations",
+      "filter": ["==", ["get", "tier"], "overview"],
+      "minzoom": 4,
+      "metadata": { "note": "Grosse Motive (Berge, Waelder, Ballons); ab z4, weiches Fade-in." },
+      "layout": {
+        "icon-image": ["get", "type"],
+        "icon-anchor": "bottom",
+        "icon-allow-overlap": true,
+        "icon-size": ["interpolate", ["linear"], ["zoom"], 4, 0.45, 8, 0.85, 12, 1.05]
+      },
+      "paint": {
+        "icon-opacity": ["interpolate", ["linear"], ["zoom"], 4, 0, 5.5, 1]
+      }
+    },
+    {
+      "id": "decorations-detail",
+      "type": "symbol",
+      "source": "decorations",
+      "filter": ["==", ["get", "tier"], "detail"],
+      "minzoom": 6,
+      "metadata": { "note": "Burgen + dichtere Waelder; erscheinen beim Reinzoomen (ab z6)." },
+      "layout": {
+        "icon-image": ["get", "type"],
+        "icon-anchor": "bottom",
+        "icon-allow-overlap": true,
+        "icon-size": ["interpolate", ["linear"], ["zoom"], 6, 0.5, 12, 1.05]
+      },
+      "paint": {
+        "icon-opacity": ["interpolate", ["linear"], ["zoom"], 6, 0, 7.5, 1]
+      }
+    }
+  ]
+}

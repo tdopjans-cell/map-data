@@ -1,0 +1,37 @@
+{
+ "mountain": {
+  "width": 170,
+  "height": 150,
+  "x": 2,
+  "y": 2,
+  "pixelRatio": 2
+ },
+ "pines": {
+  "width": 170,
+  "height": 150,
+  "x": 174,
+  "y": 2,
+  "pixelRatio": 2
+ },
+ "castle": {
+  "width": 160,
+  "height": 150,
+  "x": 346,
+  "y": 2,
+  "pixelRatio": 2
+ },
+ "balloon": {
+  "width": 120,
+  "height": 170,
+  "x": 508,
+  "y": 2,
+  "pixelRatio": 2
+ },
+ "paper": {
+  "width": 128,
+  "height": 128,
+  "x": 630,
+  "y": 2,
+  "pixelRatio": 2
+ }
+}
