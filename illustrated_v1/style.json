@@ -34,10 +34,40 @@
       }
     },
     {
+      "id": "landcover-overview",
+      "type": "fill",
+      "source": "maptiler_vector",
+      "source-layer": "globallandcover",
+      "maxzoom": 7,
+      "metadata": { "note": "Uebersichtsflaeche fuer z<7. Das detaillierte 'landcover' fuehrt dort praktisch nur Gletscher; die generalisierten Flaechen liegen in 'globallandcover' (Klassen crop, grass, scrub, tree, forest, snow - alle bereits im match unten). Ab z7 uebernimmt 'landcover'." },
+      "paint": {
+        "fill-antialias": true,
+        "fill-opacity": 0.72,
+        "fill-color": [
+          "match", ["get", "class"],
+          "wood", "#8FBF88",
+          "forest", "#8FBF88",
+          "tree", "#8FBF88",
+          "scrub", "#BFCF95",
+          "grass", "#C4DBA0",
+          "grassland", "#C4DBA0",
+          "farmland", "#CFE0AE",
+          "crop", "#CFE0AE",
+          "wetland", "#A9C7B0",
+          "rock", "#D9C9A8",
+          "sand", "#E6D6A8",
+          "ice", "#EDEFF0",
+          "snow", "#EDEFF0",
+          "#CFE0AE"
+        ]
+      }
+    },
+    {
       "id": "landcover",
       "type": "fill",
       "source": "maptiler_vector",
       "source-layer": "landcover",
+      "minzoom": 7,
       "metadata": { "note": "Storybook-Tints aus Daten, halbtransparent -> Papier scheint durch. 'class'-Werte ggf. an Tileset anpassen." },
       "paint": {
         "fill-antialias": true,
