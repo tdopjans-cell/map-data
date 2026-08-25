@@ -38,11 +38,17 @@
       "type": "fill",
       "source": "maptiler_vector",
       "source-layer": "globallandcover",
-      "maxzoom": 7,
+      "maxzoom": 8,
       "metadata": { "note": "Uebersichtsflaeche fuer z<7. Das detaillierte 'landcover' fuehrt dort praktisch nur Gletscher; die generalisierten Flaechen liegen in 'globallandcover' (Klassen crop, grass, scrub, tree, forest, snow - alle bereits im match unten). Ab z7 uebernimmt 'landcover'." },
       "paint": {
         "fill-antialias": true,
-        "fill-opacity": 0.72,
+        "fill-opacity": [
+          "interpolate", ["linear"], ["zoom"],
+          6.5, 0.72,
+          7, 0.6,
+          7.5, 0.32,
+          8, 0
+        ],
         "fill-color": [
           "match", ["get", "class"],
           "wood", "#8FBF88",
@@ -71,7 +77,12 @@
       "metadata": { "note": "Storybook-Tints aus Daten, halbtransparent -> Papier scheint durch. 'class'-Werte ggf. an Tileset anpassen." },
       "paint": {
         "fill-antialias": true,
-        "fill-opacity": 0.72,
+        "fill-opacity": [
+          "interpolate", ["linear"], ["zoom"],
+          7, 0.12,
+          7.5, 0.4,
+          8, 0.72
+        ],
         "fill-color": [
           "match", ["get", "class"],
           "wood", "#8FBF88",
@@ -97,7 +108,15 @@
       "source": "terrain_dem",
       "metadata": { "note": "Weiches, warmes Relief. Hero-Raster-Akzente kommen spaeter DIREKT hierueber." },
       "paint": {
-        "hillshade-exaggeration": 0.4,
+        "hillshade-exaggeration": [
+          "interpolate", ["linear"], ["zoom"],
+          4, 0.1,
+          6, 0.14,
+          7, 0.18,
+          8, 0.24,
+          10, 0.32,
+          12, 0.4
+        ],
         "hillshade-shadow-color": "#6E5B44",
         "hillshade-highlight-color": "#FFFBF0",
         "hillshade-accent-color": "#9C8B6E"
@@ -132,6 +151,38 @@
       }
     },
     {
+      "id": "decorations-overview-shadow",
+      "type": "circle",
+      "source": "decorations",
+      "filter": ["==", ["get", "tier"], "overview"],
+      "minzoom": 4,
+      "metadata": { "note": "Weicher Bodenschatten unter dem Motiv. Die Sprites sind normale PNGs, kein SDF - eine echte Silhouettenkontur ist ohne Asset-Aenderung nicht moeglich. Schatten + Halo darunter erzeugen den schwebenden Eindruck stattdessen." },
+      "paint": {
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 13, 6, 16, 8, 18],
+        "circle-color": "#4E4337",
+        "circle-opacity": 0.14,
+        "circle-blur": 0.85,
+        "circle-translate": [0, 4]
+      }
+    },
+    {
+      "id": "decorations-overview-halo",
+      "type": "circle",
+      "source": "decorations",
+      "filter": ["==", ["get", "tier"], "overview"],
+      "minzoom": 4,
+      "metadata": { "note": "Helle Plate zwischen Schatten und Motiv, damit es auf Gruen nicht untergeht." },
+      "paint": {
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 11, 6, 14, 8, 16],
+        "circle-color": "#FFFDF8",
+        "circle-opacity": 0.72,
+        "circle-blur": 0.25,
+        "circle-stroke-color": "#FFFFFF",
+        "circle-stroke-width": 2.5,
+        "circle-stroke-opacity": 0.95
+      }
+    },
+    {
       "id": "decorations-overview",
       "type": "symbol",
       "source": "decorations",
@@ -146,6 +197,38 @@
       },
       "paint": {
         "icon-opacity": ["interpolate", ["linear"], ["zoom"], 4, 0, 5.5, 1]
+      }
+    },
+    {
+      "id": "decorations-detail-shadow",
+      "type": "circle",
+      "source": "decorations",
+      "filter": ["==", ["get", "tier"], "detail"],
+      "minzoom": 6,
+      "metadata": { "note": "Weicher Bodenschatten unter dem Motiv. Die Sprites sind normale PNGs, kein SDF - eine echte Silhouettenkontur ist ohne Asset-Aenderung nicht moeglich. Schatten + Halo darunter erzeugen den schwebenden Eindruck stattdessen." },
+      "paint": {
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 6, 13, 8, 16, 10, 18],
+        "circle-color": "#4E4337",
+        "circle-opacity": 0.14,
+        "circle-blur": 0.85,
+        "circle-translate": [0, 4]
+      }
+    },
+    {
+      "id": "decorations-detail-halo",
+      "type": "circle",
+      "source": "decorations",
+      "filter": ["==", ["get", "tier"], "detail"],
+      "minzoom": 6,
+      "metadata": { "note": "Helle Plate zwischen Schatten und Motiv, damit es auf Gruen nicht untergeht." },
+      "paint": {
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 6, 11, 8, 14, 10, 16],
+        "circle-color": "#FFFDF8",
+        "circle-opacity": 0.72,
+        "circle-blur": 0.25,
+        "circle-stroke-color": "#FFFFFF",
+        "circle-stroke-width": 2.5,
+        "circle-stroke-opacity": 0.95
       }
     },
     {
