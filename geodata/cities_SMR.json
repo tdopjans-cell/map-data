@@ -1,1 +1,1 @@
-{"type": "FeatureCollection", "name": "cities_SMR", "features": [{"type": "Feature", "properties": {"NAME": "San Marino", "NAME_EN": "San Marino", "SCALERANK": 7}, "geometry": {"type": "Point", "coordinates": [12.44177, 43.936096]}}]}
+{"type": "FeatureCollection", "name": "cities_SMR", "features": [{"type": "Feature", "properties": {"NAME": "San Marino", "NAME_EN": "San Marino", "SCALERANK": 7, "iso_3166_2": "SM-06"}, "geometry": {"type": "Point", "coordinates": [12.44177, 43.936096]}}]}

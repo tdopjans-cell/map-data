@@ -1,1 +1,1 @@
-{"type": "FeatureCollection", "name": "cities_TLS", "features": [{"type": "Feature", "properties": {"NAME": "Dili", "NAME_EN": "Dili", "SCALERANK": 3}, "geometry": {"type": "Point", "coordinates": [125.579456, -8.559388]}}]}
+{"type": "FeatureCollection", "name": "cities_TLS", "features": [{"type": "Feature", "properties": {"NAME": "Dili", "NAME_EN": "Dili", "SCALERANK": 3, "iso_3166_2": "TL-DI"}, "geometry": {"type": "Point", "coordinates": [125.579456, -8.559388]}}]}

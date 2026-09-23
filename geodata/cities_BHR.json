@@ -1,1 +1,1 @@
-{"type": "FeatureCollection", "name": "cities_BHR", "features": [{"type": "Feature", "properties": {"NAME": "Manama", "NAME_EN": "Manama", "SCALERANK": 4}, "geometry": {"type": "Point", "coordinates": [50.583052, 26.236136]}}]}
+{"type": "FeatureCollection", "name": "cities_BHR", "features": [{"type": "Feature", "properties": {"NAME": "Manama", "NAME_EN": "Manama", "SCALERANK": 4, "iso_3166_2": "BH-13"}, "geometry": {"type": "Point", "coordinates": [50.583052, 26.236136]}}]}

@@ -1,1 +1,1 @@
-{"type": "FeatureCollection", "name": "cities_AND", "features": [{"type": "Feature", "properties": {"NAME": "Andorra la Vella", "NAME_EN": "Andorra la Vella", "SCALERANK": 6}, "geometry": {"type": "Point", "coordinates": [1.526594, 42.510753]}}]}
+{"type": "FeatureCollection", "name": "cities_AND", "features": [{"type": "Feature", "properties": {"NAME": "Andorra la Vella", "NAME_EN": "Andorra la Vella", "SCALERANK": 6, "iso_3166_2": "AD-07"}, "geometry": {"type": "Point", "coordinates": [1.526594, 42.510753]}}]}
