@@ -21,6 +21,10 @@ import {
   ApplyError, GEODATA_DIR,
 } from './apply-city-region-codes.mjs';
 
+// Dieselben geprueften Funktionen, die auch das Werkzeug benutzt — damit der
+// Test das Landespraefix nicht selbst errechnet.
+import { countryPrefix, REGION_CODE_PROPERTY } from './assign-city-regions.mjs';
+
 const ECHT = 'geodata';
 
 // ── Fixtures ───────────────────────────────────────────────────────────────
@@ -413,19 +417,85 @@ test('31 — applyPlannedUpdates schreibt nur Staedtedateien', () => {
 
 // ── 7. Echter Bestand, ausschliesslich lesend ──────────────────────────────
 
+/// Die Kennzahlen, die die Anreicherung **nicht** veraendert.
+///
+/// Sie beschreiben die Geometrie des Bestands, nicht seinen Migrationsstand,
+/// und muessen vor wie nach dem Schreiben exakt stimmen.
+const STABILER_BESTAND = Object.freeze({
+  files: 230, cities: 7342, unique: 7103, unresolved: 173,
+  ambiguous: 0, boundary: 1, invalidCoordinates: 0, missingRegionDataset: 65,
+});
+
+/// Die beiden — und einzigen — zulaessigen Migrationsstaende.
+const VORZUSTAND = Object.freeze({ added: 7103, changedFiles: 197, alreadyCorrect: 0 });
+const ZIELZUSTAND = Object.freeze({ added: 0, changedFiles: 0, alreadyCorrect: 7103 });
+
+/// Ordnet einen Bestand genau einem Migrationsstand zu.
+///
+/// Gibt `'vor'`, `'ziel'` oder `null` zurueck. `null` heisst: weder vollstaendig
+/// unangereichert noch vollstaendig angereichert — also ein Mischzustand, wie
+/// ihn ein abgebrochener Phase-B-Lauf hinterlassen wuerde. Der ist nie gueltig.
+///
+/// Absichtlich exakt und nicht nachsichtig: eine Assertion wie „added >= 0"
+/// wuerde einen halb migrierten Bestand durchwinken, und genau der ist der
+/// gefaehrliche Fall — er sieht in jeder Einzelpruefung gesund aus.
+function migrationsstand(totals) {
+  const passt = (soll) => soll.added === totals.added &&
+    soll.changedFiles === totals.changedFiles &&
+    soll.alreadyCorrect === totals.alreadyCorrect;
+  if (passt(VORZUSTAND)) return 'vor';
+  if (passt(ZIELZUSTAND)) return 'ziel';
+  return null;
+}
+
+/// Strukturelle Bedingungen, die in **beiden** gueltigen Staenden gelten.
+///
+/// Sie fangen Mischzustaende bereits ohne die festen Zahlen ab und gelten
+/// deshalb auch fuer Fixtures beliebiger Groesse.
+function strukturellStimmig(totals) {
+  const gruende = [];
+  if (totals.added + totals.alreadyCorrect !== totals.unique) {
+    gruende.push(`added(${totals.added}) + alreadyCorrect(${totals.alreadyCorrect}) `
+      + `!= unique(${totals.unique})`);
+  }
+  if ((totals.added === 0) !== (totals.changedFiles === 0)) {
+    gruende.push(`added(${totals.added}) und changedFiles(${totals.changedFiles}) `
+      + 'muessen gemeinsam null oder gemeinsam positiv sein');
+  }
+  if (totals.added > 0 && totals.alreadyCorrect > 0) {
+    gruende.push(`teilweise angereichert: ${totals.alreadyCorrect} gesetzt, `
+      + `${totals.added} fehlen noch`);
+  }
+  return gruende;
+}
+
 test('32 — Planung ueber den echten Bestand liefert die erwarteten Zahlen', () => {
   const { totals } = planAllCityUpdates(ECHT);
+
+  // a) Die acht Kennzahlen, die die Anreicherung nicht beruehrt.
   assert.deepEqual({
-    files: totals.files, cities: totals.cities, added: totals.added,
-    changedFiles: totals.changedFiles, alreadyCorrect: totals.alreadyCorrect,
-    unique: totals.unique, unresolved: totals.unresolved, ambiguous: totals.ambiguous,
+    files: totals.files, cities: totals.cities, unique: totals.unique,
+    unresolved: totals.unresolved, ambiguous: totals.ambiguous,
     boundary: totals.boundary, invalidCoordinates: totals.invalidCoordinates,
     missingRegionDataset: totals.missingRegionDataset,
-  }, {
-    files: 230, cities: 7342, added: 7103, changedFiles: 197, alreadyCorrect: 0,
-    unique: 7103, unresolved: 173, ambiguous: 0, boundary: 1,
-    invalidCoordinates: 0, missingRegionDataset: 65,
-  });
+  }, STABILER_BESTAND);
+
+  // b) Keine strukturelle Ungereimtheit.
+  assert.deepEqual(strukturellStimmig(totals), [],
+    'der Bestand ist strukturell widerspruechlich');
+
+  // c) Genau einer der beiden vollstaendigen Staende — kein Mischzustand.
+  const stand = migrationsstand(totals);
+  assert.ok(stand !== null,
+    'Weder der vollstaendige Vorzustand noch der vollstaendige Zielzustand liegt vor.\n'
+    + `  gemessen : added=${totals.added}, changedFiles=${totals.changedFiles}, `
+    + `alreadyCorrect=${totals.alreadyCorrect}\n`
+    + `  Vorzustand : added=${VORZUSTAND.added}, changedFiles=${VORZUSTAND.changedFiles}, `
+    + `alreadyCorrect=${VORZUSTAND.alreadyCorrect}\n`
+    + `  Zielzustand: added=${ZIELZUSTAND.added}, changedFiles=${ZIELZUSTAND.changedFiles}, `
+    + `alreadyCorrect=${ZIELZUSTAND.alreadyCorrect}\n`
+    + '  Ein teilweise angereicherter Bestand ist nie gueltig — vermutlich ist '
+    + 'ein --write-Lauf abgebrochen.');
 });
 
 test('33 — die Summe geht vollstaendig auf', () => {
@@ -435,13 +505,75 @@ test('33 — die Summe geht vollstaendig auf', () => {
   assert.equal(summe, totals.cities);
 });
 
+/// Der Text einer Datei ohne jedes `iso_3166_2` — aus dem Objekt erzeugt,
+/// nicht per Textersetzung.
+///
+/// Das ist der gemeinsame Nenner beider gueltiger Staende: die unangereicherte
+/// Datei ist bereits dieser Text, die angereicherte wird es wieder.
+function ohneRegionscodes(raw) {
+  const data = JSON.parse(raw);
+  for (const feature of data.features) delete feature.properties[REGION_CODE_PROPERTY];
+  return serializeLikeSource(data);
+}
+
 test('34 — Rueckrechnung ueber den gesamten echten Bestand', () => {
+  // Bewusst **ohne** Git: kein `git show`, kein Commit-Hash, kein gespeicherter
+  // Blob. Ein HEAD-Bezug waere nur eine andere Zeitabhaengigkeit — vor dem
+  // Datencommit unangereichert, danach angereichert. Der Bezugspunkt ist
+  // stattdessen die Datei selbst, von ihren Regionscodes befreit.
   const { plans } = planAllCityUpdates(ECHT);
+  assert.equal(plans.length, 230);
+  const ENTFERNEN = /, "iso_3166_2": "[A-Z]{2}-[A-Z0-9]{1,3}"/g;
+  // Dreiteilig, nicht zweiteilig: 33 Dateien enthalten keine einzige eindeutig
+  // zuordenbare Stadt (Spanien, die Antarktis, Kleinstgebiete ohne ISO-Codes).
+  // Fuer sie sind nackte und angereicherte Fassung dasselbe — sie stehen in
+  // beiden Staenden gleich da und duerfen keine Seite entscheiden.
+  let unveraenderlich = 0, unangereichert = 0, angereichert = 0;
+
   for (const p of plans) {
-    const original = readFileSync(join(ECHT, p.name), 'utf8');
-    const zurueck = p.content.replace(/, "iso_3166_2": "[A-Z]{2}-[A-Z0-9]{1,3}"/g, '');
-    assert.equal(zurueck, original, p.name);
+    const jetzt = readFileSync(join(ECHT, p.name), 'utf8');
+    const nackt = ohneRegionscodes(jetzt);
+
+    // a) Aus dem Zielinhalt nur die Codes entfernen ergibt byte-identisch
+    //    dieselbe nackte Fassung. Nichts anderes ist hinzugekommen.
+    assert.equal(p.content.replace(ENTFERNEN, ''), nackt,
+      `${p.name}: der Zielinhalt unterscheidet sich nicht nur durch iso_3166_2`);
+
+    // b) Jeder Unterschied zwischen nackt und Ziel ist ein gueltiger Code mit
+    //    dem Landespraefix, das dieses Land tatsaechlich fuehrt.
+    const regionsDatei = join(ECHT, `regions_${p.iso3}.json`);
+    const praefix = existsSync(regionsDatei)
+      ? countryPrefix(JSON.parse(readFileSync(regionsDatei, 'utf8')).features)
+      : null;
+    const codes = [...p.content.matchAll(/"iso_3166_2": "([^"]*)"/g)].map((m) => m[1]);
+    for (const c of codes) {
+      assert.match(c, /^[A-Z]{2}-[A-Z0-9]{1,3}$/, `${p.name}: ungueltiger Code "${c}"`);
+      assert.ok(!c.includes('~') && !c.includes('_'), `${p.name}: "${c}"`);
+      assert.equal(c.slice(0, 2), praefix, `${p.name}: fremdes Praefix in "${c}"`);
+    }
+    assert.equal(codes.length, p.added + p.alreadyCorrect, `${p.name}: Zahl der Codes`);
+
+    // c) Die Datei selbst ist vollstaendig in dem einen oder dem anderen
+    //    Zustand — niemals dazwischen.
+    if (nackt === p.content) unveraenderlich++;      // nichts zu setzen
+    else if (jetzt === nackt) unangereichert++;
+    else if (jetzt === p.content) angereichert++;
+    else {
+      assert.fail(`${p.name}: weder vollstaendig unangereichert noch vollstaendig `
+        + 'angereichert — Mischzustand, vermutlich ein abgebrochener --write-Lauf');
+    }
   }
+
+  // Der Bestand als Ganzes steht ebenfalls in genau einem Stand: von den
+  // Dateien, die ueberhaupt ein Feld tragen koennen, sind entweder alle noch
+  // leer oder alle gefuellt. Eine Mischung waere ein abgebrochener Lauf.
+  assert.equal(unveraenderlich, 33, 'Dateien ohne jede eindeutige Stadt');
+  assert.equal(unveraenderlich + unangereichert + angereichert, 230);
+  assert.ok(unangereichert === 0 || angereichert === 0,
+    `Mischbestand: ${unangereichert} Datei(en) noch ohne Codes, ${angereichert} bereits `
+    + 'angereichert — ein --write-Lauf ist vermutlich abgebrochen');
+  assert.equal(Math.max(unangereichert, angereichert), 197,
+    'genau 197 Dateien koennen Codes tragen');
 });
 
 test('35 — Pflichtfaelle im geplanten Stand', () => {
@@ -485,6 +617,90 @@ test('36 — planAllCityUpdates laesst den echten Bestand unberuehrt', () => {
 });
 
 // ── 8. Abgrenzung ──────────────────────────────────────────────────────────
+
+/// Ein Verzeichnis mit mehreren Laendern, jedes mit einer Region und zwei
+/// Staedten — eine drinnen, eine draussen.
+function mehrlandFixture(isoListe) {
+  const dir = mkdtempSync(join(tmpdir(), 'w2gx-misch-'));
+  for (const iso of isoListe) {
+    const pre = iso.slice(0, 2);
+    writeFileSync(join(dir, `regions_${iso}.json`),
+      serializeLikeSource({ type: 'FeatureCollection', name: `regions_${iso}`,
+        features: [quadrat(`${pre}-01`)] }), 'utf8');
+    writeFileSync(join(dir, `cities_${iso}.json`),
+      serializeLikeSource({ type: 'FeatureCollection', name: `cities_${iso}`,
+        features: [stadt('Drin', 5, 5), stadt('Draussen', 50, 50)] }), 'utf8');
+  }
+  return dir;
+}
+
+test('40 — ein abgebrochener Schreiblauf wird als Mischzustand erkannt', () => {
+  // Der gefaehrlichste Fall: Phase B bricht nach der Haelfte ab. Jede Datei
+  // fuer sich sieht dann gesund aus — nur der Gesamtstand ist es nicht.
+  const dir = mehrlandFixture(['AAA', 'BBB', 'CCC', 'DDD']);
+  try {
+    // Vorzustand: vollstaendig unangereichert.
+    let t = planAllCityUpdates(dir).totals;
+    assert.deepEqual(strukturellStimmig(t), [], 'Vorzustand ist stimmig');
+    assert.equal(t.added, 4);
+    assert.equal(t.alreadyCorrect, 0);
+
+    // Nur zwei der vier Laender anreichern — genau das, was ein Abbruch
+    // zwischen Datei 2 und 3 hinterliesse.
+    for (const iso of ['AAA', 'BBB']) {
+      const p = planCityFileUpdate(dir, iso);
+      writeFileSync(p.path, p.content, 'utf8');
+    }
+
+    t = planAllCityUpdates(dir).totals;
+    assert.equal(t.added, 2, 'zwei Laender fehlen noch');
+    assert.equal(t.alreadyCorrect, 2, 'zwei sind bereits gesetzt');
+    const gruende = strukturellStimmig(t);
+    assert.notDeepEqual(gruende, [], 'der Mischzustand muss auffallen');
+    assert.ok(gruende.some((g) => /teilweise angereichert/.test(g)), gruende.join(' | '));
+
+    // Und er ist weder Vor- noch Zielzustand.
+    assert.equal(migrationsstand({ ...t, ...VORZUSTAND, added: t.added,
+      changedFiles: t.changedFiles, alreadyCorrect: t.alreadyCorrect }), null);
+
+    // Erst der vollstaendige Lauf stellt einen gueltigen Stand her.
+    runWrite(dir);
+    t = planAllCityUpdates(dir).totals;
+    assert.deepEqual(strukturellStimmig(t), [], 'Zielzustand ist stimmig');
+    assert.equal(t.added, 0);
+    assert.equal(t.alreadyCorrect, 4);
+    assert.equal(runCheck(dir).ok, true);
+  } finally { weg(dir); }
+});
+
+test('41 — migrationsstand akzeptiert nur die beiden vollstaendigen Staende', () => {
+  assert.equal(migrationsstand(VORZUSTAND), 'vor');
+  assert.equal(migrationsstand(ZIELZUSTAND), 'ziel');
+  // Jede Abwandlung ist ein Mischzustand.
+  for (const misch of [
+    { added: 7103, changedFiles: 197, alreadyCorrect: 1 },
+    { added: 1, changedFiles: 1, alreadyCorrect: 7102 },
+    { added: 0, changedFiles: 197, alreadyCorrect: 7103 },
+    { added: 7103, changedFiles: 0, alreadyCorrect: 0 },
+    { added: 3500, changedFiles: 98, alreadyCorrect: 3603 },
+  ]) {
+    assert.equal(migrationsstand(misch), null, JSON.stringify(misch));
+  }
+});
+
+test('42 — strukturellStimmig faengt jede Ungereimtheit einzeln', () => {
+  const basis = { added: 0, changedFiles: 0, alreadyCorrect: 10, unique: 10 };
+  assert.deepEqual(strukturellStimmig(basis), []);
+  // Summe passt nicht zu unique.
+  assert.ok(strukturellStimmig({ ...basis, alreadyCorrect: 9 })
+    .some((g) => /!= unique/.test(g)));
+  // added und changedFiles laufen auseinander.
+  assert.ok(strukturellStimmig({ ...basis, changedFiles: 3 })
+    .some((g) => /gemeinsam null oder gemeinsam positiv/.test(g)));
+  // Halb migriert.
+  assert.ok(strukturellStimmig({ added: 4, changedFiles: 2, alreadyCorrect: 6, unique: 10 })
+    .some((g) => /teilweise angereichert/.test(g)));
+});
 
 test('37 — das Auditwerkzeug bleibt frei von Schreiboperationen', () => {
   const quelle = readFileSync('tools/assign-city-regions.mjs', 'utf8');
