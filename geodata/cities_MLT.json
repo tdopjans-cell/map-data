@@ -1,1 +1,1 @@
-{"type": "FeatureCollection", "name": "cities_MLT", "features": [{"type": "Feature", "properties": {"NAME": "Valletta", "NAME_EN": "Valletta", "SCALERANK": 3}, "geometry": {"type": "Point", "coordinates": [14.514711, 35.899732]}}]}
+{"type": "FeatureCollection", "name": "cities_MLT", "features": [{"type": "Feature", "properties": {"NAME": "Valletta", "NAME_EN": "Valletta", "SCALERANK": 3, "iso_3166_2": "MT-60"}, "geometry": {"type": "Point", "coordinates": [14.514711, 35.899732]}}]}

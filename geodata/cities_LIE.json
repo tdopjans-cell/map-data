@@ -1,1 +1,1 @@
-{"type": "FeatureCollection", "name": "cities_LIE", "features": [{"type": "Feature", "properties": {"NAME": "Vaduz", "NAME_EN": "Vaduz", "SCALERANK": 7}, "geometry": {"type": "Point", "coordinates": [9.51667, 47.133724]}}]}
+{"type": "FeatureCollection", "name": "cities_LIE", "features": [{"type": "Feature", "properties": {"NAME": "Vaduz", "NAME_EN": "Vaduz", "SCALERANK": 7, "iso_3166_2": "LI-11"}, "geometry": {"type": "Point", "coordinates": [9.51667, 47.133724]}}]}

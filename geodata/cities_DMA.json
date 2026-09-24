@@ -1,1 +1,1 @@
-{"type": "FeatureCollection", "name": "cities_DMA", "features": [{"type": "Feature", "properties": {"NAME": "Roseau", "NAME_EN": "Roseau", "SCALERANK": 4}, "geometry": {"type": "Point", "coordinates": [-61.387013, 15.301016]}}]}
+{"type": "FeatureCollection", "name": "cities_DMA", "features": [{"type": "Feature", "properties": {"NAME": "Roseau", "NAME_EN": "Roseau", "SCALERANK": 4, "iso_3166_2": "DM-04"}, "geometry": {"type": "Point", "coordinates": [-61.387013, 15.301016]}}]}
